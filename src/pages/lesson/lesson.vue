@@ -1,10 +1,27 @@
 <script setup>
+import { RouterLink, onBeforeRouteUpdate } from 'vue-router';
+import { ref } from 'vue';
+
 import { module, lesson, lessonsList } from './lessonData';
 import { getNumLessonsInModule } from '../home/homeData';
 import SidebarMenu from './components/SidebarMenu.vue';
-import { RouterLink } from 'vue-router';
 
 const numOfLessons = getNumLessonsInModule(module.value.moduleNumber);
+
+let timeoutId = setFirstTimeout();
+
+function setFirstTimeout() {
+    return setTimeout(() => {
+        const bubMessage = document.getElementsByClassName('bubble-message')[0];
+        bubMessage.innerHTML = "Давай, [Ник пользователя], осталось совсем чуть-чуть !";
+    }, 2 * 2000);
+}
+
+onBeforeRouteUpdate(() => {
+    clearTimeout(timeoutId);
+    timeoutId = setFirstTimeout();
+});
+
 </script>
 
 <template>

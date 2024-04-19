@@ -7,7 +7,7 @@ const app = express();
 
 // Запуск сервера в продакшн
 // Перед запуском необходимо выполнить команду npm run build
-ViteExpress.config({ mode: "production" }) 
+// ViteExpress.config({ mode: "production" }) 
 
 // Кастомные пути для работы сервера (подойдёт для реализации API)
 // app.get("/api/getTestData/:module/:lesson/:test", findTest);

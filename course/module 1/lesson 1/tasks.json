@@ -12,15 +12,15 @@
             "correctAnswer": 1
         },
         {
-            "taskType": "singleAnswer",
-            "question": "Выберите правильную структуру тега h1",
+            "taskType": "multipleAnswers",
+            "question": "Выберите неверную структуру тега h1",
             "answers": [
                 "<h1> Заголовок",
                 "</h1> Заголовок <h1>",
                 "<h1> Заголовок </h1>",
                 "Нет верного ответа"
             ],
-            "correctAnswer": 2
+            "correctAnswers": [0, 1]
         }
     ]
 }

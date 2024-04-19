@@ -3,60 +3,23 @@ import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { moduleNum, lessonNum, task } from './taskData'
+import SingleAnswerTest from './components/SingleAnswerTest.vue';
+import MultipleAnswersTest from './components/MultipleAnswersTest.vue';
 
 
-const isModalVisible = ref(false)
-const canPerformClick = ref(true)
-const modalMessage = ref("")
+const singleAnswerTestObj = ref(null);
+const multipleAnswersTestObj = ref(null);
 
-function onAnswerClick(event) {
-    if (!canPerformClick.value) return
-
-    const selectedButton = event.target
-    const buttons = document.querySelectorAll('.but')
-    buttons.forEach(button => button.classList.remove('selected'))
-    selectedButton.classList.add('selected')
-}
 
 function checkAnswers() {
-    if (!canPerformClick.value) return
-    canPerformClick.value = false;
-
-    const correctAnswer = task.value.answers[task.value.correctAnswer]
-    const selectedButton = document.querySelector('.but.selected')
-    if (selectedButton) {
-        selectedButton.classList.remove('selected')
-    } else {
-        canPerformClick.value = true
-        return
+    if(singleAnswerTestObj.value) {
+        console.log("SingleAnswerTest");
+        singleAnswerTestObj.value.checkAnswers();
     }
-
-    if (selectedButton.textContent === correctAnswer) {
-        openModal('Ты молодец, так держать!')
+    else if (multipleAnswersTestObj.value) {
+        console.log("MultipleAnswerTest");
+        multipleAnswersTestObj.value.checkAnswers();
     }
-    else {
-        selectedButton.classList.add('incorrect')
-        openModal('К сожалению ты ошибся :(')
-    }
-
-    const allButtons = document.querySelectorAll('.but')
-    allButtons.forEach(button => {
-        if (button.textContent === correctAnswer) {
-            button.classList.add('correct')
-        }
-    })
-}
-
-function openModal(label) {
-    modalMessage.value = label
-    isModalVisible.value = true
-    setTimeout(() => {
-        closeModal()
-    }, 5000)
-}
-
-function closeModal() {
-    isModalVisible.value = false
 }
 
 const prevTask = computed(() => {
@@ -66,19 +29,6 @@ const prevTask = computed(() => {
 const nextTask = computed(() => {
     return `/tests/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber + 1}`
 })
-
-function onChangeTestClick() {
-    isModalVisible.value = false
-    canPerformClick.value = true
-    modalMessage.value = ""
-
-    const buttons = document.querySelectorAll('.but')
-    buttons.forEach(button => {
-        button.classList.remove('selected')
-        button.classList.remove('correct')
-        button.classList.remove('incorrect')
-    })
-}
 </script>
 
 <template>
@@ -87,26 +37,30 @@ function onChangeTestClick() {
             <h2> Задание {{ task.taskNumber }} </h2>
         </div>
 
-        <!-- Пример тестового задания -->
+        <!-- Текст вопроса -->
         <div class="container_course">
             <div class="text_c">
                 <h2> {{ task.question }} </h2>
             </div>
 
+            <!-- Ответы на вопрос -->
             <div class="ans">
-                <button class="but" @click="onAnswerClick($event)" v-for="ans in task.answers">{{ ans }}</button>
+                <!-- Если тип вопроса - одиночный выбор -->
+                <template v-if="task.taskType === 'singleAnswer'">
+                    <SingleAnswerTest ref="singleAnswerTestObj" />
+                </template>
+
+                <!-- Если тип вопроса - множественный выбор -->
+                <template v-else-if="task.taskType === 'multipleAnswers'">
+                    <MultipleAnswersTest ref="multipleAnswersTestObj" />
+                </template>
             </div>
 
             <div class="function_buttons">
-                <RouterLink :to="prevTask" id="previos_task" @click="onChangeTestClick"> Предыдущее задание </RouterLink>
+                <RouterLink :to="prevTask" id="previos_task" @click="onChangeTestClick"> Предыдущее задание
+                </RouterLink>
                 <button id="check_ans" @click="checkAnswers">Проверить задание</button>
                 <RouterLink :to="nextTask" id="next_task" @click="onChangeTestClick"> Следующее задание </RouterLink>
-            </div>
-
-            <div class="modal" v-show="isModalVisible">
-                <div class="modal-content">
-                    <p>{{ modalMessage }}</p>
-                </div>
             </div>
         </div>
     </section>
