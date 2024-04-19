@@ -7,7 +7,11 @@ const app = express();
 
 // Запуск сервера в продакшн
 // Перед запуском необходимо выполнить команду npm run build
-// ViteExpress.config({ mode: "production" }) 
+ViteExpress.config({ mode: "production" }) 
+
+// Используем папку course для получения статических файлов
+app.use('/course', express.static('course'));
+app.use(ViteExpress.static());
 
 // Кастомные пути для работы сервера (подойдёт для реализации API)
 // app.get("/api/getTestData/:module/:lesson/:test", findTest);
