@@ -20,13 +20,19 @@ const routes = [
         path: '/tests/:module/:lesson/:task',
         name: "task",
         component: Tasks,
-        meta: { requiresTaskData: true},
+        meta: { 
+            requiresTaskData: true, 
+            requiresModulesData: true, 
+        },
     },
     {
         path: '/lessons/:module/:lesson',
         name: 'lesson',
         component: Lesson,
-        meta: { requiresLessonData: true, requiresModulesData: true },
+        meta: { 
+            requiresLessonData: true, 
+            requiresModulesData: true, 
+        },
     },
     { path: '/:pathMatch(.*)*', name: "PageNotFound", component: PageNotFound }
 ]
@@ -34,6 +40,10 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes,
+    scrollBehavior(to, from, savedPosition) {
+        // always scroll to top
+        return { top: 0 }
+    },
 })
 
 router.beforeEach(async (to, from, next) => {

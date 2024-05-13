@@ -1,0 +1,12 @@
+{
+    "hero": "default-hero",
+    "emotions": {
+        "cry":"cry-img.png",
+        "happy":"happy-img.png",
+        "welcome":"welcome-img.png",
+        "sad":"sad-img.png",
+        "angry":"angry-img.png",
+        "reverie":"reverie-img.png",
+        "neutral":"neutral-img.png"
+    }
+}

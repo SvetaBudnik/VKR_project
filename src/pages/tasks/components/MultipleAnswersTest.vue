@@ -1,17 +1,16 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 
-import { task } from '../taskData';
+import { task, testController } from '../taskData';
 
-const isModalVisible = ref(false);
-const canPerformClick = ref(true);
-const modalMessage = ref("");
+testController.checkAnswers = () => checkAnswers();
 
+const resetSelectionTimeout = ref(0);
 
 // Обработчик клика для выбора нескольких ответов
 function onMultipleAnswersClick(index) {
-    if (!canPerformClick.value) return;
+    if (!testController.canPerformClick.value) return;
 
     const button = document.querySelectorAll('.but')[index];
     const selected = button.dataset.selected === 'true';
@@ -22,8 +21,10 @@ function onMultipleAnswersClick(index) {
 }
 
 function checkAnswers() {
-    if (!canPerformClick.value) return;
-    canPerformClick.value = false;
+    if (task.value.taskType != "multipleAnswers") return null;
+
+    if (!testController.canPerformClick.value) return null;
+    testController.canPerformClick.value = false;
 
     let correct = true;
 
@@ -31,12 +32,16 @@ function checkAnswers() {
     const selectedAnswers = Array.from(selectedButtons).map(button => button.textContent);
     const correctAnswers = task.value.correctAnswers.map(index => task.value.answers[index]);
 
+    if (selectedAnswers.length === 0) {
+        return null;
+    }
+
     // Проверяем соответствие выбранных ответов и правильных ответов
     if (selectedAnswers.length !== correctAnswers.length) {
         correct = false;
     } else {
-        for (let i = 0; i < selectedAnswers.length; i++) {
-            if (!correctAnswers.includes(selectedAnswers[i])) {
+        for (const el of selectedAnswers) {
+            if (!correctAnswers.includes(el)) {
                 correct = false;
                 break;
             }
@@ -44,45 +49,33 @@ function checkAnswers() {
     }
 
     if (correct) {
-        openModal('Ты молодец, так держать!');
+        selectedButtons.forEach(button => {
+            button.classList.add('correct');
+            button.classList.remove('selected');
+        });
     } else {
         selectedButtons.forEach(button => {
             button.classList.add('incorrect');
             button.classList.remove('selected');
         });
-        openModal('К сожалению, ты ошибся :(');
     }
 
-    // Подсвечиваем правильные ответы
-    const allButtons = document.querySelectorAll('.but');
-    allButtons.forEach((button, index) => {
-        if (task.value.correctAnswers.includes(index)) {
-            button.classList.add('correct');
-            button.classList.remove('incorrect');
+    resetSelectionTimeout.value = setTimeout(() => {
+        const buttons = document.querySelectorAll('.but');
+        buttons.forEach(button => {
             button.classList.remove('selected');
-        }
-    });
+            button.classList.remove('correct');
+            button.classList.remove('incorrect');
+        });
+        testController.canPerformClick.value = true;
+    }, 2000);
 
-}
-
-// Функция открытия модального окна
-function openModal(label) {
-    modalMessage.value = label
-    isModalVisible.value = true
-    setTimeout(() => {
-        closeModal()
-    }, 5000)
-}
-
-// Функция закрытия модального окна
-function closeModal() {
-    isModalVisible.value = false
+    return correct;
 }
 
 onBeforeRouteUpdate(() => {
-    isModalVisible.value = false
-    canPerformClick.value = true
-    modalMessage.value = ""
+    clearTimeout(resetSelectionTimeout.value);
+    testController.reset();
 
     const buttons = document.querySelectorAll('.but')
     buttons.forEach(button => {
@@ -91,10 +84,6 @@ onBeforeRouteUpdate(() => {
         button.classList.remove('incorrect')
     })
 });
-
-defineExpose({
-    checkAnswers,
-});
 </script>
 
 <template>
@@ -102,12 +91,6 @@ defineExpose({
         :data-selected="false">
         {{ ans }}
     </button>
-
-    <div class="modal" v-show="isModalVisible">
-        <div class="modal-content">
-            <p>{{ modalMessage }}</p>
-        </div>
-    </div>
 </template>
 
 <style></style>

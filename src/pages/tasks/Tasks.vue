@@ -1,40 +1,108 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, onBeforeRouteUpdate } from 'vue-router'
 
-import { moduleNum, lessonNum, task } from './taskData'
+import { moduleNum, lessonNum, task, testController, getHeroTestReactions, reactions } from './taskData'
+import { getTasksCountIn, getNextLessonNumber } from '../home/homeData';
 import SingleAnswerTest from './components/SingleAnswerTest.vue';
 import MultipleAnswersTest from './components/MultipleAnswersTest.vue';
+import TextFieldTest from './components/TextFieldTest.vue';
 
+/**
+ * @template T
+ * @typedef {object} Ref
+ * @property {T} value
+ */
 
-const singleAnswerTestObj = ref(null);
-const multipleAnswersTestObj = ref(null);
+const isModalVisible = ref(false);
+const modalMessage = ref("");
+const modalTimeoutNumber = ref(0);
 
+const attemptCount = ref(0);
 
-function checkAnswers() {
-    if(singleAnswerTestObj.value) {
-        console.log("SingleAnswerTest");
-        singleAnswerTestObj.value.checkAnswers();
+async function checkAnswers() {
+    resetModal();
+
+    await getHeroTestReactions(attemptCount.value);
+
+    const answerResult = testController.checkAnswers();
+    if (answerResult === null) {
+        return;
     }
-    else if (multipleAnswersTestObj.value) {
-        console.log("MultipleAnswerTest");
-        multipleAnswersTestObj.value.checkAnswers();
+
+    if (answerResult === true) {
+        openModal('Ты молодец, так держать!');
+    } else {
+        openModal('К сожалению, ты ошибся :(');
     }
+
+    attemptCount.value++;
 }
 
 const prevTask = computed(() => {
     return `/tests/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber - 1}`
-})
+});
 
 const nextTask = computed(() => {
-    return `/tests/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber + 1}`
-})
+    const tasksCount = getTasksCountIn(moduleNum.value, lessonNum.value);
+    const nextTask = +task.value.taskNumber + 1;
+    if (tasksCount >= nextTask) {
+        return `/tests/${moduleNum.value}/${lessonNum.value}/${nextTask}`
+    }
+
+    const nextLesson = getNextLessonNumber(moduleNum.value, lessonNum.value);
+    if (nextLesson == null) {
+        return '/';
+    }
+    return `/lessons/${nextLesson.module}/${nextLesson.lesson}`;
+});
+
+// TODO: Выдавать число баллов Тэгом
+// TODO: Парсинг имени, парсинг баллов
+// Вычисляем количество баллов в зависимости от номера попытки
+const score = computed(() => {
+    const scores = {
+        0: 0,
+        1: 5,
+        2: 4,
+        3: 2,
+    };
+
+    return scores[attemptCount.value] ?? 1;
+});
+
+function openModal(label) {
+    modalMessage.value = label;
+    isModalVisible.value = true;
+    modalTimeoutNumber.value = setTimeout(() => {
+        closeModal()
+    }, 5000)
+}
+
+// Функция закрытия модального окна
+function closeModal() {
+    isModalVisible.value = false
+}
+
+function resetModal() {
+    clearTimeout(modalTimeoutNumber.value);
+    closeModal();
+}
+
+onBeforeRouteUpdate(() => {
+    attemptCount.value = 0;
+    testController.reset();
+
+    resetModal();
+});
 </script>
 
 <template>
     <section>
         <div class="number_task">
             <h2> Задание {{ task.taskNumber }} </h2>
+            <p>Попытка: {{ attemptCount }}</p>
+            <p>Очки: {{ score }}</p>
         </div>
 
         <!-- Текст вопроса -->
@@ -47,20 +115,30 @@ const nextTask = computed(() => {
             <div class="ans">
                 <!-- Если тип вопроса - одиночный выбор -->
                 <template v-if="task.taskType === 'singleAnswer'">
-                    <SingleAnswerTest ref="singleAnswerTestObj" />
+                    <SingleAnswerTest />
                 </template>
 
                 <!-- Если тип вопроса - множественный выбор -->
                 <template v-else-if="task.taskType === 'multipleAnswers'">
-                    <MultipleAnswersTest ref="multipleAnswersTestObj" />
+                    <MultipleAnswersTest />
+                </template>
+
+                <!-- Если тип вопроса - текстовое написание -->
+                <template class="text_test" v-else-if="task.taskType === 'textField'">
+                    <TextFieldTest />
                 </template>
             </div>
 
             <div class="function_buttons">
-                <RouterLink :to="prevTask" id="previos_task" @click="onChangeTestClick"> Предыдущее задание
-                </RouterLink>
-                <button id="check_ans" @click="checkAnswers">Проверить задание</button>
-                <RouterLink :to="nextTask" id="next_task" @click="onChangeTestClick"> Следующее задание </RouterLink>
+                <RouterLink :to="prevTask" id="previos_task"> Предыдущее задание </RouterLink>
+                <button id="check_ans" @click="checkAnswers">Проверить задание </button>
+                <RouterLink :to="nextTask" id="next_task"> Следующее задание </RouterLink>
+            </div>
+        </div>
+
+        <div class="modal" v-show="isModalVisible">
+            <div class="modal-content">
+                <p>{{ modalMessage }}</p>
             </div>
         </div>
     </section>
@@ -80,7 +158,27 @@ const nextTask = computed(() => {
     /* margin-top: 40px; */
 }
 
+.text_test {
+    position: relative;
+    width: 100%;
+    /* Ширина родительского элемента */
+    height: 100%;
+    /* Высота родительского элемента */
+}
 
+.text_test input[type=text] {
+    border: 1px solid rgb(154, 154, 154);
+    padding: 20px 20px;
+    text-align: left;
+    font-size: 14px;
+    overflow: hidden;
+
+    /* Центрирование содержимого */
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -80%);
+}
 
 .function_buttons {
     display: flex;

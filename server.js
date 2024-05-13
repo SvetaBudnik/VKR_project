@@ -2,15 +2,19 @@ import express from "express";
 import ViteExpress from "vite-express";
 import { findTaskParams } from "./src/serverModules/serverTaskWorker.js";
 import { getCourseInfo, getLessonFor } from './src/serverModules/serverModuleWorker.js'
+import { getActionForLesson } from "./src/serverModules/actionsWorker.js";
+import { getHeroTestReactions } from "./src/serverModules/heroProvider.js";
 
 const app = express();
 
 // Запуск сервера в продакшн
 // Перед запуском необходимо выполнить команду npm run build
-ViteExpress.config({ mode: "production" }) 
+// ViteExpress.config({ mode: "production" }) 
 
 // Используем папку course для получения статических файлов
 app.use('/course', express.static('course'));
+app.use('/hero', express.static('hero'));
+
 app.use(ViteExpress.static());
 
 // Кастомные пути для работы сервера (подойдёт для реализации API)
@@ -41,6 +45,26 @@ app.get("/api/getLessonData/:module/:lesson", async (req, res) => {
         res.status(404).send(result.reason);
     } else {
         res.send(result.data);
+    }
+});
+
+app.get("/api/getAction/:module/:lesson/:action", (req, res) => {
+    const result = getActionForLesson(req.params.action, req.params.module, req.params.lesson);
+    if (!result.success) {
+        res.status(404).send(result.reason);
+    } else {
+        res.send(result.response);
+    }
+});
+
+app.get("/api/hero/testReactions/:num", (req, res) => {
+    const response = getHeroTestReactions(req.params.num);
+    if (!response.success) {
+        res.status(404).send(response.reason);
+    } else {
+        res.send({
+            data: response.result,
+        });
     }
 });
 

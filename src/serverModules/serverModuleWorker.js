@@ -17,11 +17,8 @@ function readLessonInfo(directory) {
 
         if (stats.isFile() && file.endsWith(".md")) {
             result.theory = filepath;
-        } else if (stats.isFile() && file.endsWith(".json")) {
+        } else if (stats.isFile() && file == "tasks.json") {
             result.tasks = filepath;
-        }
-        else {
-            console.error(`Директория курса содержит файл ${filepath}, являющийся несовместимым. Пропускаем...`);
         }
     });
 
@@ -47,9 +44,6 @@ function readModuleInfo(directory) {
             const lessonNumber = parseInt(file.split(" ").filter((val, _, __) => val.length != 0)[1]);
             result.lessons[lessonNumber] = lessonInfo;
         }
-        else {
-            console.error(`Директория курса содержит файл ${filepath}, являющийся несовместимым. Пропускаем...`);
-        }
     });
 
     return result;
@@ -74,9 +68,6 @@ function readCourse(directory) {
             const moduleNumber = parseInt(file.split(" ").filter((val) => val.length != 0)[1]);
             result.modules[moduleNumber] = moduleInfo;
         }
-        else {
-            console.error(`Директория курса содержит файл ${filepath}, являющийся несовместимым. Пропускаем...`);
-        }
     });
 
     return result;
@@ -87,9 +78,10 @@ function getLessonHeaders(lesson) {
         lessonName: "",
         tasksCount: 0,
     };
-
+    
+    
     const lessonFile = fs.readFileSync(lesson.theory).toString();
-    const lessonHeaders = lessonFile.match(/^### .+/g);
+    const lessonHeaders = lessonFile.match(/### .+/g);
     if (lessonHeaders == null) {
         console.error(`Заголовок урока ${lesson.theory} неверный. Ожидалось что-то типа '### Название урока'`);
         return null;
@@ -117,7 +109,7 @@ function getModuleHeaders(module) {
     };
 
     const moduleFile = fs.readFileSync(module.module).toString();
-    const moduleHeaders = moduleFile.match(/^## .+/g);
+    const moduleHeaders = moduleFile.match(/## .+/g);
     if (moduleHeaders == null) {
         console.error(`Заголовок модуля ${module.module} неверный. Ожидалось что-то типа '## Название модуля'`);
         return null;
@@ -155,7 +147,7 @@ function getCourseHeaders(course) {
     };
 
     const courseFile = fs.readFileSync(course.course).toString();
-    const courseHeaders = courseFile.match(/^# .+/g);
+    const courseHeaders = courseFile.match(/# .+/g);
     if (courseHeaders == null) {
         console.error("Заголовок курса неверный. Ожидалось что-то типа '# Название курса'");
         return null;
@@ -178,6 +170,11 @@ function getCourseHeaders(course) {
             headers.modules[key] = moduleHeaders;
         }
     }
+
+    console.log("\n********************************************************\n");
+    console.log("Найдены следующие файлы курса: ");
+    console.dir(headers, {depth: null});
+    console.log("\n********************************************************\n");
 
     return headers;
 }

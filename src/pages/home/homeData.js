@@ -1,12 +1,22 @@
+import { lesson } from '../lesson/lessonData';
 import baseUrl from '/src/components/baseUrl';
-import {ref} from 'vue';
+import { ref } from 'vue';
 
+/**
+ * @template T
+ * @typedef {object} Ref
+ * @property {T} value
+ */
+
+
+/**
+ * @type {Ref<null | {courseName: string, modules: Object<string, {moduleNumber: string, moduleTitle: string, moduleName: string, lessons: Object<string, {lessonNumber: string, lessonTitle: string, lessonName:string, tasksCount: number}>}>}>}
+ */
 export const course = ref(null);
-// export const modules = ref(null);
 
 function generateLinksForLessons() {
     const modules = course.value.modules;
-    
+
     for (const moduleNum in modules) {
         const module = modules[moduleNum];
 
@@ -26,7 +36,7 @@ export async function getModules() {
         console.log('Данные модулей уже загружены. Пропускаем...');
         return true;
     }
-    
+
     const response = await fetch(`${baseUrl}api/getCourseInfo`, {
         method: "GET",
         headers: { "Accept": "application/json" }
@@ -36,17 +46,16 @@ export async function getModules() {
         console.log(`Server responsed ${response.status}: ${desc}`)
         return false;
     }
-    
+
     const data = await response.json();
     course.value = data;
 
     generateLinksForLessons();
-    
+
     return true;
 }
 
 export function getNumLessonsInModule(_module) {
-    // const module = course.value.modules.find((el) => el.moduleNumber == _module); // TODO: DELETE THIS
     const module = course.value.modules[_module];
     if (module == null)
         return null;
@@ -60,4 +69,120 @@ export function getLessonsIn(_module) {
     }
 
     return module.lessons;
+}
+
+export function getTasksCountIn(_module, _lesson) {
+    const module = course.value.modules[_module];
+    if (module == null) {
+        return null;
+    }
+    const lesson = module.lessons[_lesson];
+    if (lesson == null) {
+        return null;
+    }
+
+    return lesson.tasksCount;
+}
+
+export function hasTasks(_module, _lesson) {
+    return getTasksCountIn(_module, _lesson) > 0;
+}
+
+/**
+ * Получить номер модуля и следующего урока относительно текущего, если они ещё есть
+ * @param {string} _module - номер текущего модуля
+ * @param {string} _lesson - номер текущего урока
+ * @returns {{module:string, lesson:string}|null} номер модуля и следующего урока, либо null, если больше уроков нет
+ */
+export function getNextLessonNumber(_module, _lesson) {
+    const module = course.value.modules[_module];
+    if (module == null) {
+        return null;
+    }
+
+    let founded = false;
+    for (const lessonNumber in module.lessons) {
+        if (founded) {
+            return {
+                module: _module,
+                lesson: lessonNumber,
+            };
+        }
+        if (lessonNumber == _lesson) {
+            founded = true;
+        }
+    }
+
+    founded = false;
+    let moduleNumber = "-1";
+    for (const moduleNum in course.value.modules) {
+        if (founded) {
+            moduleNumber = moduleNum;
+            break;
+        }
+        if (moduleNum == _module) {
+            founded = true;
+        }
+    }
+
+    if (moduleNumber == "-1") {
+        return null;
+    }
+
+    for (const lessonNumber in course.value.modules[moduleNumber].lessons) {
+        return {
+            module: moduleNumber,
+            lesson: lessonNumber,
+        };
+    }
+
+    return null;
+}
+
+/**
+ * Метод получения предыдущего урока (если он есть)
+ * @param {string} _module - номер текущего модуля
+ * @param {string} _lesson - номер текущего урока
+ * @returns {{module:string, lesson: string} | null}
+ */
+export function getPrevLessonNumber(_module, _lesson) {
+    const module = course.value.modules[_module];
+    if (module == null) {
+        return null;
+    }
+
+    let prevLesson = "-1";
+    for (const lessonNumber in module.lessons) {
+        if (lessonNumber == _lesson && prevLesson != "-1") {
+            return {
+                module: _module,
+                lesson: prevLesson,
+            }
+        }
+        prevLesson = lessonNumber;
+    }
+
+    let prevModule = "-1";
+    let founded = false;
+    for (const moduleNum in course.value.modules) {
+        if (moduleNum == _module && prevModule != "-1") {
+            founded = true;
+            break;
+        }
+        prevModule = moduleNum;
+    }
+
+    if (!founded) {
+        return null;
+    }
+
+    const lessons = Object.keys(course.value.modules[prevModule].lessons).reverse();
+    if (lessons.length != 0) {
+        return {
+            module: prevModule,
+            lesson: lessons[0],
+        };
+    }
+
+    return null;
 }
