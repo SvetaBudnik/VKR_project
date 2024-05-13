@@ -2,11 +2,12 @@
 import { ref, computed } from 'vue'
 import { RouterLink, onBeforeRouteUpdate } from 'vue-router'
 
-import { moduleNum, lessonNum, task, testController, getHeroTestReactions, reactions } from './taskData'
+import { moduleNum, lessonNum, task, testController, getHeroTestReactions, reactions, attemptCount, heroController } from './taskData'
 import { getTasksCountIn, getNextLessonNumber } from '../home/homeData';
 import SingleAnswerTest from './components/SingleAnswerTest.vue';
 import MultipleAnswersTest from './components/MultipleAnswersTest.vue';
 import TextFieldTest from './components/TextFieldTest.vue';
+import TasksHero from './components/TasksHero.vue';
 
 /**
  * @template T
@@ -18,25 +19,23 @@ const isModalVisible = ref(false);
 const modalMessage = ref("");
 const modalTimeoutNumber = ref(0);
 
-const attemptCount = ref(0);
 
 async function checkAnswers() {
     resetModal();
-
-    await getHeroTestReactions(attemptCount.value);
 
     const answerResult = testController.checkAnswers();
     if (answerResult === null) {
         return;
     }
+    attemptCount.value++;
 
     if (answerResult === true) {
-        openModal('Ты молодец, так держать!');
+        openModal(`${reactions.value.onSuccess.phrase} --- ${reactions.value.onSuccess.emotionImgPath}`);
+        heroController.showSuccess();
     } else {
-        openModal('К сожалению, ты ошибся :(');
+        openModal(`${reactions.value.onError.phrase} --- ${reactions.value.onError.emotionImgPath}`);
+        heroController.showError();
     }
-
-    attemptCount.value++;
 }
 
 const prevTask = computed(() => {
@@ -90,7 +89,6 @@ function resetModal() {
 }
 
 onBeforeRouteUpdate(() => {
-    attemptCount.value = 0;
     testController.reset();
 
     resetModal();
@@ -99,6 +97,8 @@ onBeforeRouteUpdate(() => {
 
 <template>
     <section>
+        <TasksHero />
+
         <div class="number_task">
             <h2> Задание {{ task.taskNumber }} </h2>
             <p>Попытка: {{ attemptCount }}</p>

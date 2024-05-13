@@ -58,17 +58,18 @@ function checkAnswers() {
             button.classList.add('incorrect');
             button.classList.remove('selected');
         });
+
+        resetSelectionTimeout.value = setTimeout(() => {
+            const buttons = document.querySelectorAll('.but');
+            buttons.forEach(button => {
+                button.classList.remove('selected');
+                button.classList.remove('correct');
+                button.classList.remove('incorrect');
+            });
+            testController.canPerformClick.value = true;
+        }, 2000);
     }
 
-    resetSelectionTimeout.value = setTimeout(() => {
-        const buttons = document.querySelectorAll('.but');
-        buttons.forEach(button => {
-            button.classList.remove('selected');
-            button.classList.remove('correct');
-            button.classList.remove('incorrect');
-        });
-        testController.canPerformClick.value = true;
-    }, 2000);
 
     return correct;
 }

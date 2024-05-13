@@ -1,5 +1,5 @@
 {
-    "hero": "default-hero",
+    "hero": "tag",
     "emotions": {
         "cry":"cry-img.png",
         "happy":"happy-img.png",

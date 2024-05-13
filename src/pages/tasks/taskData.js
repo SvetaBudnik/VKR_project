@@ -33,6 +33,52 @@ import baseUrl from '/src/components/baseUrl';
  * @property {number} taskNumber
  */
 
+
+class TestController {
+    /** @type {() => boolean | null} */
+    checkAnswers = null;
+
+    /** @type {Ref<boolean>} */
+    canPerformClick = ref(true);
+
+    reset = () => {
+        this.canPerformClick.value = true;
+    }
+}
+
+class HeroController {
+    heroImgUrl = ref("");
+    heroPhrase = ref("");
+
+    errorTimeoutMs = 2000;
+    _timeoutNumber = 0;
+
+    showIdle() {
+        this.heroImgUrl.value = reactions.value.onIdle.emotionImgPath;
+        this.heroPhrase.value = reactions.value.onIdle.phrase;
+    }
+
+    async showError() {        
+        this.heroImgUrl.value = reactions.value.onError.emotionImgPath;
+        this.heroPhrase.value = reactions.value.onError.phrase;
+
+        this._timeoutNumber = setTimeout(() => {
+            this.showIdle();
+        }, this.errorTimeoutMs);
+
+        await getHeroTestReactions(attemptCount.value);
+    }
+
+    showSuccess() {
+        this.heroImgUrl.value = reactions.value.onSuccess.emotionImgPath;
+        this.heroPhrase.value = reactions.value.onSuccess.phrase;
+    }
+
+    reset() {
+        clearTimeout(this._timeoutNumber);
+    }
+}
+
 /** @type {Ref<number>} */
 export const moduleNum = ref(null);
 
@@ -44,6 +90,13 @@ export const task = ref(null);
 
 /** @type {Ref<{ onSuccess: {emotionImgPath: string, phrase: string}, onError:  {emotionImgPath: string, phrase: string}, onIdle:  {emotionImgPath: string, phrase: string} }>} */
 export const reactions = ref(null);
+
+export const testController = new TestController();
+
+export const heroController = new HeroController();
+
+export const attemptCount = ref(0);
+
 
 export async function getTaskData(_module, _lesson, _task) {
     const fetchUrl = `${baseUrl}api/getTaskData/${_module}/${_lesson}/${_task}`;
@@ -64,7 +117,8 @@ export async function getTaskData(_module, _lesson, _task) {
 
     console.info("Task was founded");
 
-    await getHeroTestReactions(1);
+    attemptCount.value = 0;
+    await getHeroTestReactions(0);
 
     return true;
 }
@@ -72,7 +126,7 @@ export async function getTaskData(_module, _lesson, _task) {
 /**
  * Функция запроса реакций для теста
  * @param {number} attempt - номер попытки (начинается с 0)
- * @returns {bool} - результат получения реакций с сервера
+ * @returns {Promise<boolean>} - результат получения реакций с сервера
  */
 export async function getHeroTestReactions(attempt) {
     const fetchUrl = `${baseUrl}api/hero/testReactions/${attempt}`;
@@ -80,7 +134,7 @@ export async function getHeroTestReactions(attempt) {
 
     const response = await fetch(fetchUrl, {
         method: "GET",
-        headers: {"Accept" : "application/json"},
+        headers: { "Accept": "application/json" },
     });
     if (!response.ok) {
         const desc = await response.text();
@@ -96,16 +150,4 @@ export async function getHeroTestReactions(attempt) {
     return true;
 }
 
-class TestController {
-    /** @type {() => boolean | null} */
-    checkAnswers = null;
 
-    /** @type {Ref<boolean>} */
-    canPerformClick = ref(true);
-
-    reset = () => {
-        this.canPerformClick.value = true;
-    }
-}
-
-export const testController = new TestController();

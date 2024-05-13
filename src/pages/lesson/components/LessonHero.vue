@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import {onBeforeRouteLeave, onBeforeRouteUpdate} from 'vue-router';
 import { scrollListener, timerListener, Action } from '../lessonData';
 

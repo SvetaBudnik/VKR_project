@@ -42,20 +42,20 @@ function checkAnswers() {
         selectedButton.classList.add('incorrect');
         selectedButton.classList.remove('selected');
         correct = false;
+
+        resetSelectionTimeout.value = setTimeout(() => {
+            const buttons = document.querySelectorAll('.but');
+            buttons.forEach(button => {
+                button.classList.remove('selected');
+                button.classList.remove('correct');
+                button.classList.remove('incorrect');
+            });
+            testController.canPerformClick.value = true;
+        }, 2000);
     } else {
         selectedButton.classList.add('correct');
         selectedButton.classList.remove('selected');
     }
-    
-    resetSelectionTimeout.value = setTimeout(() => {
-        const buttons = document.querySelectorAll('.but');
-        buttons.forEach(button => {
-            button.classList.remove('selected');
-            button.classList.remove('correct');
-            button.classList.remove('incorrect');
-        });
-        testController.canPerformClick.value = true;
-    }, 2000);
 
     return correct;
 }
@@ -75,9 +75,9 @@ onBeforeRouteUpdate(() => {
 </script>
 
 <template>
-        <button class="but" @click="onSingleAnswerClick(index)" v-for="(ans, index) in task.answers" :key="index">
-            {{ ans }}
-        </button>
+    <button class="but" @click="onSingleAnswerClick(index)" v-for="(ans, index) in task.answers" :key="index">
+        {{ ans }}
+    </button>
 </template>
 
 <style></style>
