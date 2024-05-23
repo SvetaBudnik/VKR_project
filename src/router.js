@@ -1,37 +1,59 @@
 import { createWebHistory, createRouter } from 'vue-router';
 
-import Home from '/src/pages/home/Home.vue';
-import Tasks from '/src/pages/tasks/Tasks.vue';
-import Lesson from '/src/pages/lesson/lesson.vue';
-import PageNotFound from '/src/pages/PageNotFound.vue';
+import loginController from './components/login';
 
-import { getTaskData } from '/src/pages/tasks/taskData';
-import { getLessonData } from '/src/pages/lesson/lessonData';
-import { getModules } from '/src/pages/home/homeData';
+import Home from './pages/home/Home.vue';
+import Course from './pages/course/Course.vue';
+import Tasks from './pages/tasks/Tasks.vue';
+import Lesson from './pages/lesson/lesson.vue';
+import PageNotFound from './pages/PageNotFound.vue';
+import Login from './pages/login/Login.vue';
+import Account from './pages/account/Account.vue';
+
+import { getTaskData } from './pages/tasks/taskData';
+import { getLessonData } from './pages/lesson/lessonData';
+import { getModules } from './pages/course/courseData';
+import { fetchCoursesInfo } from './pages/home/homeData';
 
 const routes = [
+    {
+        path: "/login",
+        name: "LoginPage",
+        component: Login,
+    },
     {
         path: '/',
         name: "HomePage",
         component: Home,
+        meta: { requiresCoursesData: true },
+    },
+    {
+        path:'/account',
+        name: "AccountPage",
+        component: Account,
+    },
+    {
+        path: '/courses/:course',
+        name: "CoursePage",
+        component: Course,
         meta: { requiresModulesData: true },
     },
     {
-        path: '/tests/:module/:lesson/:task',
+        path: '/courses/:course/tasks/:module/:lesson/:task',
         name: "task",
         component: Tasks,
-        meta: { 
-            requiresTaskData: true, 
-            requiresModulesData: true, 
+        meta: {
+            requiresTaskData: true,
+            requiresModulesData: true,
         },
     },
     {
-        path: '/lessons/:module/:lesson',
+        path: '/courses/:course/lessons/:module/:lesson',
         name: 'lesson',
         component: Lesson,
-        meta: { 
-            requiresLessonData: true, 
-            requiresModulesData: true, 
+        meta: {
+            requiresLessonData: true,
+            requiresModulesData: true,
         },
     },
     { path: '/:pathMatch(.*)*', name: "PageNotFound", component: PageNotFound }
@@ -47,18 +69,34 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-    console.log("BeforeEach")
+    console.log("BeforeEach");
+
+    if (to.name !== "LoginPage" && !loginController.isUserLoggined()) {
+        console.log("token is empty. Redirect to login page");
+        next({ name: "LoginPage" });
+        return;
+    }
+
+    if (to.meta.requiresCoursesData) {
+        console.log("Requires courses data");
+        if (!await fetchCoursesInfo()) {
+            console.log("Redirect to PageNotFound");
+            next({ name: "PageNotFound" });
+            return;
+        }
+    }
+
     if (to.meta.requiresModulesData) {
         console.log("Requires modules data");
-        if (!await getModules()) {
-            console.log("Redirect to homepage");
-            next({ name: "PageNotFound" });
+        if (!await getModules(to.params.course)) {
+            console.log("Redirect to Homepage");
+            next({ name: "HomePage" });
             return;
         }
     }
     if (to.meta.requiresTaskData) {
         console.log("Requires task data")
-        if (!await getTaskData(to.params.module, to.params.lesson, to.params.task)) {
+        if (!await getTaskData(to.params.course, to.params.module, to.params.lesson, to.params.task)) {
             console.log("Redirect to homepage");
             next({ name: "HomePage" });
             return;
@@ -66,7 +104,7 @@ router.beforeEach(async (to, from, next) => {
     }
     if (to.meta.requiresLessonData) {
         console.log("Requires lesson data");
-        if (!await getLessonData(to.params.module, to.params.lesson)) {
+        if (!await getLessonData(to.params.course, to.params.module, to.params.lesson)) {
             console.log("Redirecting to homepage");
             next({ name: "HomePage" });
             return;

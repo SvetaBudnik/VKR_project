@@ -2,8 +2,8 @@
 import { ref, computed } from 'vue'
 import { RouterLink, onBeforeRouteUpdate } from 'vue-router'
 
-import { moduleNum, lessonNum, task, testController, getHeroTestReactions, reactions, attemptCount, heroController } from './taskData'
-import { getTasksCountIn, getNextLessonNumber } from '../home/homeData';
+import { moduleNum, lessonNum, task, testController, reactions, attemptCount, heroController, courseNum } from './taskData'
+import { getTasksCountIn, getNextLessonNumber } from '../course/courseData';
 import SingleAnswerTest from './components/SingleAnswerTest.vue';
 import MultipleAnswersTest from './components/MultipleAnswersTest.vue';
 import TextFieldTest from './components/TextFieldTest.vue';
@@ -39,21 +39,25 @@ async function checkAnswers() {
 }
 
 const prevTask = computed(() => {
-    return `/tests/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber - 1}`
+    if (task.value.taskNumber - 1 <= 0) {
+        return `/courses/${courseNum.value}/lessons/${moduleNum.value}/${lessonNum.value}`;
+    }
+
+    return `/courses/${courseNum.value}/tasks/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber - 1}`
 });
 
 const nextTask = computed(() => {
     const tasksCount = getTasksCountIn(moduleNum.value, lessonNum.value);
     const nextTask = +task.value.taskNumber + 1;
     if (tasksCount >= nextTask) {
-        return `/tests/${moduleNum.value}/${lessonNum.value}/${nextTask}`
+        return `/courses/${courseNum.value}/tasks/${moduleNum.value}/${lessonNum.value}/${nextTask}`
     }
 
     const nextLesson = getNextLessonNumber(moduleNum.value, lessonNum.value);
     if (nextLesson == null) {
-        return '/';
+        return '/courses/${courseNum}';
     }
-    return `/lessons/${nextLesson.module}/${nextLesson.lesson}`;
+    return `/courses/${courseNum.value}/lessons/${nextLesson.module}/${nextLesson.lesson}`;
 });
 
 // TODO: Выдавать число баллов Тэгом

@@ -1,12 +1,16 @@
 import { ref } from 'vue';
 import baseUrl from '/src/components/baseUrl';
-import { course, getLessonsIn, getNumLessonsInModule } from '../home/homeData';
+import { course, getLessonsIn, getNumLessonsInModule } from '../course/courseData';
+import loginController from '../../components/login';
 
 /**
  * @template T
  * @typedef {object} Ref
  * @property {T} value
  */
+
+/** @type {Ref<number>} */
+export const courseNum = ref(null);
 
 /**
  * @type {Ref<{moduleNumber: number, moduleName: string, moduleTitle: string}>}
@@ -29,19 +33,20 @@ export const lesson = ref({});
 export const numOfLessons = ref(0);
 
 /**
- * 
+ * @param {number} _course - номер курса
  * @param {number} _module - номер модуля
  * @param {number} _lesson - номер урока
  * @returns `true`, если данные нашлись; `false` в противном случае.
  */
-export async function getLessonData(_module, _lesson) {
-    const response = await fetch(`${baseUrl}api/getLessonData/${_module}/${_lesson}`, {
-        method: "GET",
-        headers: { "Accept": "application/json" }
-    });
+export async function getLessonData(_course, _module, _lesson) {
+    const response = await loginController.sendGet(`api/courses/${_course}/modules/${_module}/lessons/${_lesson}`);
+    if (response === null) {
+        console.error("User is not loggined???");
+        return false;
+    }
     if (!response.ok) {
         const desc = await response.text();
-        console.log(`Server responded error: ${response.status}, ${desc}`);
+        console.error(`Server responded error: ${response.status}, ${desc}`);
         return false;
     }
 
@@ -49,6 +54,8 @@ export async function getLessonData(_module, _lesson) {
     
     const moduleInfo = course.value.modules[_module];
     const lessonInfo = moduleInfo.lessons[_lesson];
+
+    courseNum.value = _course;
 
     module.value = {
         moduleNumber: moduleInfo.moduleNumber,
@@ -210,10 +217,11 @@ export class Action {
  * @returns {Promise<Action|null>} - итоговое действие
  */
 async function fetchAction(action) {
-    const response = await fetch(`${baseUrl}api/getAction/${module.value.moduleNumber}/${lesson.value.lessonNumber}/${action}`, {
-        method: "GET",
-        headers: { "Accept": "application/json" }
-    });
+    const response = await loginController.sendGet(`api/courses/${courseNum.value}/modules/${module.value.moduleNumber}/lessons/${lesson.value.lessonNumber}/actions/${action}`);
+    if (response === null) {
+        console.error("User not loggined??");
+        return null;
+    }
     if (!response.ok) {
         const desc = await response.text();
         console.error(`Server responded error: ${response.status}, ${desc}`);

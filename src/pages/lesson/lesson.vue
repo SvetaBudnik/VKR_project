@@ -2,8 +2,8 @@
 import { RouterLink } from 'vue-router';
 import { computed } from 'vue';
 
-import { module, lesson, lessonsList, numOfLessons } from './lessonData';
-import { hasTasks, getNextLessonNumber, getPrevLessonNumber } from '../home/homeData';
+import { module, lesson, lessonsList, numOfLessons, courseNum } from './lessonData';
+import { hasTasks, getNextLessonNumber, getPrevLessonNumber } from '../course/courseData';
 import SidebarMenu from './components/SidebarMenu.vue';
 import LessonHero from './components/LessonHero.vue';
 
@@ -11,20 +11,20 @@ import LessonHero from './components/LessonHero.vue';
 const prev = computed(() => {
     const prevLesson = getPrevLessonNumber(module.value.moduleNumber, lesson.value.lessonNumber);
     if (prevLesson != null) {
-        return `/lessons/${prevLesson.module}/${prevLesson.lesson}`;
+        return `/courses/${courseNum.value}/lessons/${prevLesson.module}/${prevLesson.lesson}`;
     }
-    return '/';
+    return '/courses/${courseNum.value}';
 });
 
 const next = computed(() => {
     if (hasTasks(module.value.moduleNumber, lesson.value.lessonNumber)) {
-        return `/tests/${module.value.moduleNumber}/${lesson.value.lessonNumber}/1`;
+        return `/courses/${courseNum.value}/tasks/${module.value.moduleNumber}/${lesson.value.lessonNumber}/1`;
     }
     const nextLesson = getNextLessonNumber(module.value.moduleNumber, lesson.value.lessonNumber);
     if (nextLesson != null) {
-        return `/lessons/${nextLesson.module}/${nextLesson.lesson}`;
+        return `/courses/${courseNum.value}/lessons/${nextLesson.module}/${nextLesson.lesson}`;
     }
-    return '/';
+    return '/courses/${courseNum.value}';
 });
 </script>
 

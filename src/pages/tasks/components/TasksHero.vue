@@ -47,6 +47,8 @@ onBeforeRouteUpdate(() => {
     flex-direction: column;
     align-items: flex-end;
     max-width: 30%;
+
+    pointer-events: none;
 }
 
 .bubble {

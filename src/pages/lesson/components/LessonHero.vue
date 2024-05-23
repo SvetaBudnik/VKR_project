@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import {onBeforeRouteLeave, onBeforeRouteUpdate} from 'vue-router';
+import { ref, onMounted, computed } from 'vue';
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import { scrollListener, timerListener, Action } from '../lessonData';
 
 /**
@@ -19,6 +19,15 @@ function handleScrollCall() {
     scrollListener.handleScroll();
 }
 
+const isHeroVisible = ref(false);
+
+function setHero(phrase, emotion) {
+    isHeroVisible.value = phrase !== "";
+
+    bubbleMessage.value.innerHTML = phrase;
+    bubbleCharacter.value.innerHTML = `<img src="${emotion}" />`
+}
+
 function handleEvents() {
     // Определяем действие с событиями по скроллу
     scrollListener.callbackFunction = (/**@type Action */ action) => {
@@ -33,8 +42,7 @@ function handleEvents() {
         const { top } = elem.getBoundingClientRect();
 
         if (top < winHeight / 1.5) {
-            bubbleMessage.value.innerHTML = action.phrase;
-            bubbleCharacter.value.innerHTML = `<img src="${action.emotion}" />`
+            setHero(action.phrase, action.emotion);
             return true;
         }
 
@@ -43,8 +51,7 @@ function handleEvents() {
 
     // Запускаем таймеры, добавляем обработчики событий
     timerListener.callbackFunction = (/**@type Action */ action) => {
-        bubbleMessage.value.innerHTML = action.phrase;
-        bubbleCharacter.value.innerHTML = `<img src="${action.emotion}" />`
+        setHero(action.phrase, action.emotion);
     };
 
     timerListener.setTimers();
@@ -60,8 +67,7 @@ onMounted(() => {
 
 // Перед навигацией на другой урок не забываем перезапустить все обработчики!
 onBeforeRouteUpdate(() => {
-    bubbleMessage.value.innerHTML = "";
-    bubbleCharacter.value.innerHTML = "";
+    setHero("", "");
 
     timerListener.setTimers();
     handleScrollCall();
@@ -77,7 +83,7 @@ onBeforeRouteLeave(() => {
 </script>
 
 <template>
-    <div class="bubble-wrapper">
+    <div v-show="isHeroVisible" class="bubble-wrapper">
         <div class="bubble">
             <span ref="bubbleMessage" class="bubble-message"></span>
             <span class="bubble-triangle"></span>
@@ -96,6 +102,8 @@ onBeforeRouteLeave(() => {
     flex-direction: column;
     align-items: flex-end;
     max-width: 30%;
+
+    pointer-events: none;
 }
 
 .bubble {
@@ -119,28 +127,28 @@ onBeforeRouteLeave(() => {
     min-width: 50px;
     max-width: 100%;
 
-	position: relative;
-	margin: 20px;
-	text-align: center;
-	font-family: 'Press Start 2P', cursive;
-	line-height: 1.3em;
-	box-shadow: 0 -4px #fff, 0 -8px #000, 4px 0 #fff, 4px -4px #000, 8px 0 #000, 0 4px #fff, 0 8px #000, -4px 0 #fff, -4px 4px #000, -8px 0 #000, -4px -4px #000, 4px 4px #000;
-	box-sizing: border-box;
+    position: relative;
+    margin: 20px;
+    text-align: center;
+    font-family: 'Press Start 2P', cursive;
+    line-height: 1.3em;
+    box-shadow: 0 -4px #fff, 0 -8px #000, 4px 0 #fff, 4px -4px #000, 8px 0 #000, 0 4px #fff, 0 8px #000, -4px 0 #fff, -4px 4px #000, -8px 0 #000, -4px -4px #000, 4px 4px #000;
+    box-sizing: border-box;
 
     z-index: 999;
 }
 
 .bubble .bubble-message::after {
-	content: '';
-	display: block;
-	position: absolute;
-	box-sizing: border-box;
+    content: '';
+    display: block;
+    position: absolute;
+    box-sizing: border-box;
 
-	height: 4px;
-	width: 4px;
-	bottom: -8px;
+    height: 4px;
+    width: 4px;
+    bottom: -8px;
     right: 32px;
-	box-shadow: 0 4px #000, 0 8px #000, 0 12px #000, 0 16px #000, -4px 12px #000, -8px 8px #000, -12px 4px #000, -4px 4px #fff, -8px 4px #fff, -4px 8px #fff, -4px 0 #fff, -8px 0 #fff, -12px 0 #fff;
+    box-shadow: 0 4px #000, 0 8px #000, 0 12px #000, 0 16px #000, -4px 12px #000, -8px 8px #000, -12px 4px #000, -4px 4px #fff, -8px 4px #fff, -4px 8px #fff, -4px 0 #fff, -8px 0 #fff, -12px 0 #fff;
 }
 
 

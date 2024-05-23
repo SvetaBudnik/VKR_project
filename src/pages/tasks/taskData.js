@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import baseUrl from '/src/components/baseUrl';
+import loginController from '../../components/login';
 
 /**
  * @template T
@@ -58,7 +58,7 @@ class HeroController {
         this.heroPhrase.value = reactions.value.onIdle.phrase;
     }
 
-    async showError() {        
+    async showError() {
         this.heroImgUrl.value = reactions.value.onError.emotionImgPath;
         this.heroPhrase.value = reactions.value.onError.phrase;
 
@@ -80,6 +80,9 @@ class HeroController {
 }
 
 /** @type {Ref<number>} */
+export const courseNum = ref(null);
+
+/** @type {Ref<number>} */
 export const moduleNum = ref(null);
 
 /** @type {Ref<number>} */
@@ -98,14 +101,12 @@ export const heroController = new HeroController();
 export const attemptCount = ref(0);
 
 
-export async function getTaskData(_module, _lesson, _task) {
-    const fetchUrl = `${baseUrl}api/getTaskData/${_module}/${_lesson}/${_task}`;
-    console.info(`Sending request to ${fetchUrl}`);
-
-    const response = await fetch(fetchUrl, {
-        method: "GET",
-        headers: { "Accept": "application/json" }
-    });
+export async function getTaskData(_course, _module, _lesson, _task) {
+    const response = await loginController.sendGet(`api/courses/${_course}/modules/${_module}/lessons/${_lesson}/tasks/${_task}`);
+    if (response === null) {
+        console.error("User not loggined???");
+        return false;
+    }
     if (!response.ok) {
         const desc = await response.text();
         console.error(`Server responsed ${response.status}: ${desc}`)
@@ -114,6 +115,7 @@ export async function getTaskData(_module, _lesson, _task) {
     task.value = await response.json();
     moduleNum.value = _module;
     lessonNum.value = _lesson;
+    courseNum.value = _course;
 
     console.info("Task was founded");
 
@@ -129,13 +131,11 @@ export async function getTaskData(_module, _lesson, _task) {
  * @returns {Promise<boolean>} - результат получения реакций с сервера
  */
 export async function getHeroTestReactions(attempt) {
-    const fetchUrl = `${baseUrl}api/hero/testReactions/${attempt}`;
-    console.info(`Sending request to ${fetchUrl}`);
-
-    const response = await fetch(fetchUrl, {
-        method: "GET",
-        headers: { "Accept": "application/json" },
-    });
+    const response = await loginController.sendGet(`api/courses/${courseNum.value}/tests/heroPhrases/${attempt}`);
+    if (response === null) {
+        console.error("User not loggined???");
+        return false;
+    }
     if (!response.ok) {
         const desc = await response.text();
         console.error(`Server responsed ${response.status}: ${desc}`);

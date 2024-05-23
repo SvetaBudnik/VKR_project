@@ -1,15 +1,34 @@
 <script setup>
-import {RouterLink} from 'vue-router'
+import { RouterLink } from 'vue-router'
+import { computed } from 'vue';
+import loginController from '../components/login';
+import { courseNum } from '../pages/course/courseData';
+
+const showMenu = computed(() => {
+    return loginController.login.value !== "";
+});
 </script>
 
 <template>
     <header>
         <div class="main-header">
             <RouterLink to="/" class="logo"> SB academy </RouterLink>
-            <nav>
+            <nav v-if="showMenu">
                 <ul class="menu">
-                    <li><RouterLink to="/">Главная страница</RouterLink></li>
-                    <li><RouterLink :to="{ name: 'PageNotFound' }">Личный кабинет</RouterLink></li>
+                    <!-- Бесполезная кнопка, лого сайта делает ту же самую работу -->
+                    <!-- <li>
+                        <RouterLink to="/">Главная страница</RouterLink>
+                    </li> -->
+
+                    <li v-if="courseNum !== null">
+                        <RouterLink :to="`/courses/${courseNum}`">К курсу</RouterLink>
+                    </li>
+                    <li>
+                        <RouterLink :to="{ name: 'AccountPage' }">Личный кабинет</RouterLink>
+                    </li>
+                    <li>
+                        <RouterLink :to="{ name: 'LoginPage' }">Выйти</RouterLink>
+                    </li>
                 </ul>
             </nav>
         </div>
@@ -55,9 +74,9 @@ import {RouterLink} from 'vue-router'
     float: right;
     display: block;
     margin-right: 40px;
+}
 
-    width: 180px;
-    height: 18px;
+.menu a {
     background: #e4f2df;
     font-family: Arial, sans-serif;
     border-radius: 10px;
@@ -67,9 +86,6 @@ import {RouterLink} from 'vue-router'
 
     text-align: center;
 
-}
-
-.menu a {
     color: #080808;
     text-decoration: none;
     font-size: 16px;

@@ -1,15 +1,29 @@
 import express from "express";
 import ViteExpress from "vite-express";
-import { findTaskParams } from "./src/serverModules/serverTaskWorker.js";
-import { getCourseInfo, getLessonFor } from './src/serverModules/serverModuleWorker.js'
-import { getActionForLesson } from "./src/serverModules/actionsWorker.js";
-import { getHeroTestReactions } from "./src/serverModules/heroProvider.js";
+import bodyParser from "body-parser";
+
+import apiRoutes from "./src-server/api-routes.js";
+import { addCourse, loadExistenceCourses } from "./src-server/courses.js";
+import { enableJwtDebugMode } from "./src-server/jwt-middleware.js";
+
 
 const app = express();
 
-// Запуск сервера в продакшн
-// Перед запуском необходимо выполнить команду npm run build
-// ViteExpress.config({ mode: "production" }) 
+/**
+ * Middleware, пишущий логи в консоль
+ * @param {import("express").Request} req 
+ * @param {import("express").Response} res 
+ * @param {import("express").NextFunction} next 
+ */
+const logger = (req, res, next) => {
+    console.log(`\n[INFO]: new request: ${req.url}`);
+    next();
+};
+
+app.use(logger);
+
+// bodyParser - позволяет удобно парсить тело post-запросов
+app.use(bodyParser.json());
 
 // Используем папку course для получения статических файлов
 app.use('/course', express.static('course'));
@@ -17,61 +31,19 @@ app.use('/hero', express.static('hero'));
 
 app.use(ViteExpress.static());
 
-// Кастомные пути для работы сервера (подойдёт для реализации API)
-// app.get("/api/getTestData/:module/:lesson/:test", findTest);
-app.get("/api/getTaskData/:module/:lesson/:task", (req, res) => {
-    const result = findTaskParams(req.params.module, req.params.lesson, req.params.task);
-    if (!result.success) {
-        res.status(404).send(result.reason);
-        return;
-    }
-    res.send(result.data);
-});
+app.use('/api', apiRoutes);
 
-app.get("/api/getCourseInfo", (_, res) => {
-    const data = getCourseInfo();
-    if (data == null) {
-        const reason = "Internal error on server side";
-        res.status(404).send(reason);
-        return;
-    }
-
-    res.send(data);
-});
-
-app.get("/api/getLessonData/:module/:lesson", async (req, res) => {
-    const result = getLessonFor(req.params.module, req.params.lesson);
-    if (!result.success) {
-        res.status(404).send(result.reason);
-    } else {
-        res.send(result.data);
-    }
-});
-
-app.get("/api/getAction/:module/:lesson/:action", (req, res) => {
-    const result = getActionForLesson(req.params.action, req.params.module, req.params.lesson);
-    if (!result.success) {
-        res.status(404).send(result.reason);
-    } else {
-        res.send(result.response);
-    }
-});
-
-app.get("/api/hero/testReactions/:num", (req, res) => {
-    const response = getHeroTestReactions(req.params.num);
-    if (!response.success) {
-        res.status(404).send(response.reason);
-    } else {
-        res.send({
-            data: response.result,
-        });
-    }
-});
-
-// В идеале - определить вот такую функцию, чтобы выкидывало все некорректные запросы к API сервера
-app.get("/api/*", (req, res) => {
-    res.status(404).send("This page doesn't exists");
-});
+loadExistenceCourses(app);
 
 const port = process.env.PORT || 3000;
-ViteExpress.listen(app, port, () => console.log(`Server is listening at port ${port} ...`));
+
+// Перед запуском сервера в продакшн необходимо выполнить команду npm run build,
+// А также раскомментировать строку ниже
+//                                  [v]
+// ViteExpress.config({ mode: "production" }) 
+
+// Отключает функционал аутентификации (не выполняются проверки на корректность токенов и права администратора)
+enableJwtDebugMode();
+
+ViteExpress.listen(app, port, () => console.log(`NEW Server is listening at port ${port} ...`));
+
