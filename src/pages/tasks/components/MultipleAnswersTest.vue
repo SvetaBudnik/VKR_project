@@ -2,11 +2,17 @@
 import { ref } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 
-import { task, testController } from '../taskData';
+import { task, testController, tasksResults, taskNum } from '../taskData';
 
 testController.checkAnswers = () => checkAnswers();
 
 const resetSelectionTimeout = ref(0);
+
+if (tasksResults[taskNum.value]) {
+    testController.canPerformClick.value = false;
+    highlightCorrect();
+}
+
 
 // Обработчик клика для выбора нескольких ответов
 function onMultipleAnswersClick(index) {
@@ -74,6 +80,17 @@ function checkAnswers() {
     return correct;
 }
 
+function highlightCorrect() {
+    if (task.value.taskType != "multipleAnswers") return null;
+    
+    const buttons = document.querySelectorAll('.but');
+    buttons.forEach((button) => {
+        if (task.value.correctAnswers.includes(task.value.answers.indexOf(button.textContent))) {
+            button.classList.add('correct');
+        }
+    });
+}
+
 onBeforeRouteUpdate(() => {
     clearTimeout(resetSelectionTimeout.value);
     testController.reset();
@@ -84,6 +101,11 @@ onBeforeRouteUpdate(() => {
         button.classList.remove('correct')
         button.classList.remove('incorrect')
     })
+
+    if (tasksResults[taskNum.value]) {
+        testController.canPerformClick.value = false;
+        highlightCorrect();
+    }
 });
 </script>
 

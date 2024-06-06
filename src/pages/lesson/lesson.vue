@@ -1,19 +1,22 @@
 <script setup>
-import { RouterLink } from 'vue-router';
+import { RouterLink, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import { computed } from 'vue';
 
 import { module, lesson, lessonsList, numOfLessons, courseNum } from './lessonData';
 import { hasTasks, getNextLessonNumber, getPrevLessonNumber } from '../course/courseData';
 import SidebarMenu from './components/SidebarMenu.vue';
 import LessonHero from './components/LessonHero.vue';
+import { onTheoryLoad, beforeRouteUpdate, beforeRouteLeave, gaming__is_last_lesson_ever } from './gamification_helper';
 
+
+await onTheoryLoad();
 
 const prev = computed(() => {
     const prevLesson = getPrevLessonNumber(module.value.moduleNumber, lesson.value.lessonNumber);
     if (prevLesson != null) {
         return `/courses/${courseNum.value}/lessons/${prevLesson.module}/${prevLesson.lesson}`;
     }
-    return '/courses/${courseNum.value}';
+    return `/courses/${courseNum.value}`;
 });
 
 const next = computed(() => {
@@ -24,8 +27,13 @@ const next = computed(() => {
     if (nextLesson != null) {
         return `/courses/${courseNum.value}/lessons/${nextLesson.module}/${nextLesson.lesson}`;
     }
-    return '/courses/${courseNum.value}';
+
+    gaming__is_last_lesson_ever.value = true;
+    return `/courses/${courseNum.value}`;
 });
+
+onBeforeRouteUpdate(beforeRouteUpdate);
+onBeforeRouteLeave(beforeRouteLeave);
 </script>
 
 <template>

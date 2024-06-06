@@ -1,0 +1,65 @@
+{
+    "event": "onModuleStart",
+    "dialog": [
+        {
+            "hero": "tag",
+            "emotion": "neutral",
+            "text": "Один два три четыре"
+        },
+        {
+            "hero": "tag",
+            "emotion": "neutral",
+            "text": "Один два три четыре"
+        },
+        {
+            "hero": "tag",
+            "emotion": "neutral",
+            "text": "Один два три четыре"
+        },
+        {
+            "type": "fork",
+            "condition": {
+                "variable": "test_scores",
+                "on": {
+                    ">= 35": [
+                        {
+                            "hero": "tag",
+                            "emotion": "neutral",
+                            "text": "Вы неплохо справляетесь с обучением!"
+                        },
+                        {
+                            "hero": "tag",
+                            "emotion": "neutral",
+                            "text": "Благодарю"
+                        },
+                        {
+                            "givePoints": [
+                                {
+                                    "variable": "html_master",
+                                    "value": 5
+                                }
+                            ]
+                        },
+                        {
+                            "giveAchievements": [
+                                "lets get started"
+                            ]
+                        }
+                    ],
+                    "else": [
+                        {
+                            "hero": "tag",
+                            "emotion": "neutral",
+                            "text": "Вижу, учёба тебе даётся с трудом. Но не переживай, у тебя всё получится!"
+                        },
+                        {
+                            "hero": "tag",
+                            "emotion": "neutral",
+                            "text": "Это да... Спасибо за поддержку!"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

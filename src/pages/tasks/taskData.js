@@ -41,7 +41,7 @@ class TestController {
     /** @type {Ref<boolean>} */
     canPerformClick = ref(true);
 
-    reset = () => {
+    reset() {
         this.canPerformClick.value = true;
     }
 }
@@ -51,7 +51,7 @@ class HeroController {
     heroPhrase = ref("");
 
     errorTimeoutMs = 2000;
-    _timeoutNumber = 0;
+    #timeoutNumber = 0;
 
     showIdle() {
         this.heroImgUrl.value = reactions.value.onIdle.emotionImgPath;
@@ -62,7 +62,7 @@ class HeroController {
         this.heroImgUrl.value = reactions.value.onError.emotionImgPath;
         this.heroPhrase.value = reactions.value.onError.phrase;
 
-        this._timeoutNumber = setTimeout(() => {
+        this.#timeoutNumber = setTimeout(() => {
             this.showIdle();
         }, this.errorTimeoutMs);
 
@@ -75,18 +75,21 @@ class HeroController {
     }
 
     reset() {
-        clearTimeout(this._timeoutNumber);
+        clearTimeout(this.#timeoutNumber);
     }
 }
 
-/** @type {Ref<number>} */
-export const courseNum = ref(null);
+/** @type {Ref<string>} */
+export const coursePath = ref(null);
 
 /** @type {Ref<number>} */
 export const moduleNum = ref(null);
 
 /** @type {Ref<number>} */
 export const lessonNum = ref(null);
+
+/** @type {Ref<number>} */
+export const taskNum = ref(null);
 
 /** @type {Ref<singleAnswerTaskType | multipleAnswersTaskType | textFieldTaskType>} */
 export const task = ref(null);
@@ -100,6 +103,10 @@ export const heroController = new HeroController();
 
 export const attemptCount = ref(0);
 
+export const overallScore = ref(0);
+
+/** @type {number[]} */
+export const tasksResults = [];
 
 export async function getTaskData(_course, _module, _lesson, _task) {
     const response = await loginController.sendGet(`api/courses/${_course}/modules/${_module}/lessons/${_lesson}/tasks/${_task}`);
@@ -113,9 +120,10 @@ export async function getTaskData(_course, _module, _lesson, _task) {
         return false
     }
     task.value = await response.json();
+    taskNum.value = _task;
     moduleNum.value = _module;
     lessonNum.value = _lesson;
-    courseNum.value = _course;
+    coursePath.value = _course;
 
     console.info("Task was founded");
 
@@ -131,7 +139,7 @@ export async function getTaskData(_course, _module, _lesson, _task) {
  * @returns {Promise<boolean>} - результат получения реакций с сервера
  */
 export async function getHeroTestReactions(attempt) {
-    const response = await loginController.sendGet(`api/courses/${courseNum.value}/tests/heroPhrases/${attempt}`);
+    const response = await loginController.sendGet(`api/courses/${coursePath.value}/tests/heroPhrases/${attempt}`);
     if (response === null) {
         console.error("User not loggined???");
         return false;

@@ -31,14 +31,16 @@ import { CourseWorker } from '../course-worker/course-worker.js';
 
 export class ActionsWorker {
     _courseFolder = "";
-    _actionsFilename = "actions.json";
+    _actionsFilename = "static/actions.json";
 
     /** @type {CourseWorker} */
     _course = null;
 
 
     /** @type {CoursePhrasesType} */
-    actions = null;
+    get actions() {
+        return this._readActions();
+    }
 
     /** @type {HeroWorker} */
     hero = null;
@@ -53,7 +55,6 @@ export class ActionsWorker {
 
         this._course = course;
         this._readActions();    // Читаем события из файлов (либо сканируем курс, если файлов нет)
-        this._writeActions();   // Записываем события
     }
 
     /**
@@ -64,32 +65,34 @@ export class ActionsWorker {
      * @returns {{success: false, reason: string, response: undefined} | {success: true, reason: undefined, response: {phrase: string, emotionImgPath: string, onTime: Number|null}}}
      */
     getActionForLesson(actionName, module, lesson) {
-        const _lesson = this.actions.modules[module].lessons[lesson];
-        if (_lesson != null) {
+        const actions = this.actions;
+
+        const _lesson = actions.modules[module].lessons[lesson];
+        if (_lesson) {
             const lessonJsons = _lesson.lesson;
-            if (lessonJsons != null) {
+            if (lessonJsons) {
                 const actionInfo = lessonJsons[actionName];
-                if (actionInfo != null) {
+                if (actionInfo) {
                     return this.getAction(actionInfo, actionName);
                 }
             }
         }
 
-        const _module = this.actions.modules[module].module;
-        if (_module != null) {
+        const _module = actions.modules[module].module;
+        if (_module) {
             const moduleJsons = _module.module;
-            if (moduleJsons != null) {
+            if (moduleJsons) {
                 const actionInfo = moduleJsons[actionName];
-                if (actionInfo != null) {
+                if (actionInfo) {
                     return this.getAction(actionInfo, actionName);
                 }
             }
         }
 
-        const courseJson = this.actions.course;
-        if (courseJson != null) {
+        const courseJson = actions.course;
+        if (courseJson) {
             const actionInfo = courseJson[actionName];
-            if (actionInfo != null) {
+            if (actionInfo) {
                 return this.getAction(actionInfo, actionName);
             }
         }
@@ -133,24 +136,19 @@ export class ActionsWorker {
         };
     }
 
-    _writeActions() {
-        const actionsFilePath = path.join(this._courseFolder, this._actionsFilename);
-
-        fs.writeFileSync(actionsFilePath, JSON.stringify(this.actions));
-    }
-
     _readActions() {
-        if (this.actions !== null) {
-            return;
-        }
-
         const actionsFilePath = path.join(this._courseFolder, this._actionsFilename);
+        /** @type {CoursePhrasesType} */
+        let actions = {};
 
         if (fs.existsSync(actionsFilePath)) {
-            this.actions = JSON.parse(fs.readFileSync(actionsFilePath));
+            actions = JSON.parse(fs.readFileSync(actionsFilePath));
         } else {
-            this.actions = this._getActionsForCourse(this._course);
+            actions = this._getActionsForCourse(this._course);
+            fs.writeFileSync(actionsFilePath, JSON.stringify(actions));
         }
+
+        return actions;
     }
 
     /**
@@ -248,38 +246,61 @@ export class HeroWorker {
     configFileName = "config.json";
     testReactionsFileName = "test-reactions.json";
 
-    heroImagesFolder = "";
-    /** @type {Object<string, string>} */
-    emotions = {};
+    heroFilePath = "";
 
-    /** @type {{onIdle: Array<{emotion: string, phrases: string[]}>, onError: Array<{emotion: string, phrases: string[]}>, onSuccess: Array<{emotion: string, phrases: string[]}>}} */
-    testReactions = {};
+    defaultHeroName = "";
 
     /**
-     * @param {CourseWorker} course 
+     * Эмоции всех персонажей
+     */
+    get emotions() {
+        return this._readConfigFile();
+    };
+
+    /** 
+     * Реакции на тесты основного персонажа
+     */
+    get testReactions() {
+        return this._getTestReactions();
+    }
+
+    /**
+     * @param {CourseWorker} course
      */
     constructor(course) {
-        const heroFilePath = path.join(course.baseCourseDir, this.heroFolderInCourse);
-        this._readConfigFile(path.join(heroFilePath, this.configFileName));
-        this._getTestReactions(path.join(heroFilePath, this.testReactionsFileName));
+        this.heroFilePath = path.join(course.baseCourseDir, this.heroFolderInCourse);
+        this._readConfigFile(path.join(this.heroFilePath, this.configFileName));
+        this._getTestReactions(path.join(this.heroFilePath, this.testReactionsFileName));
     }
 
     /**
      * Получить путь до картинки с эмоцией героя
      * @param {string} emotion - эмоция героя
+     * @param {string|null} heroName - имя героя
      * @returns {{success: true, emotionImgPath: string} | {success: false, reason: string}}
      */
-    getHeroEmotion(emotion) {
-        const emotionImg = this.emotions[emotion];
-        if (emotionImg === null) {
+    getHeroEmotion(emotion, heroName = null) {
+        if (!heroName) {
+            heroName = this.defaultHeroName;
+        }
+
+        const hero = this.emotions.find(h => h.hero === heroName);
+        if (!hero) {
             return {
                 success: false,
-                reason: "Emotion doesn't exist",
+                reason: `Героя '${heroName}' не существует`,
+            }
+        }
+        const emotionImg = hero.emotions[emotion];
+        if (!emotionImg) {
+            return {
+                success: false,
+                reason: `Эмоция ${emotion} для героя ${heroName} не существует`,
             };
         }
 
         /** @type {string} */
-        const imgPath = path.join(this.heroImagesFolder, emotionImg).replaceAll('\\', '/');
+        const imgPath = path.join('/' + this.heroFilePath, hero.hero, emotionImg).replaceAll('\\', '/');
         return {
             success: true,
             emotionImgPath: imgPath,
@@ -308,12 +329,14 @@ export class HeroWorker {
             onIdle: {},
         };
 
+        const testReactions = this.testReactions;
+
         /** @type {{emotion: string, phrases: string[]}} */
         let onSuccessReactions = null;
-        if (this.testReactions.onSuccess.length > attempt) {
-            onSuccessReactions = this.testReactions.onSuccess[attempt];
+        if (testReactions.onSuccess.length > attempt) {
+            onSuccessReactions = testReactions.onSuccess[attempt];
         } else {
-            onSuccessReactions = this.testReactions.onSuccess.at(-1);
+            onSuccessReactions = testReactions.onSuccess.at(-1);
         }
 
         const successImgPath = this.getHeroEmotion(onSuccessReactions.emotion);
@@ -328,10 +351,10 @@ export class HeroWorker {
 
         /** @type {{emotion: string, phrases: string[]}} */
         let onErrorReactions = null;
-        if (this.testReactions.onError.length > attempt) {
-            onErrorReactions = this.testReactions.onError[attempt];
+        if (testReactions.onError.length > attempt) {
+            onErrorReactions = testReactions.onError[attempt];
         } else {
-            onErrorReactions = this.testReactions.onError.at(-1);
+            onErrorReactions = testReactions.onError.at(-1);
         }
 
         const errorImgPath = this.getHeroEmotion(onErrorReactions.emotion);
@@ -346,10 +369,10 @@ export class HeroWorker {
 
         /** @type {{emotion: string, phrases: string[]}} */
         let onIdleReactions = null;
-        if (this.testReactions.onIdle.length > attempt) {
-            onIdleReactions = this.testReactions.onIdle[attempt];
+        if (testReactions.onIdle.length > attempt) {
+            onIdleReactions = testReactions.onIdle[attempt];
         } else {
-            onIdleReactions = this.testReactions.onIdle.at(-1);
+            onIdleReactions = testReactions.onIdle.at(-1);
         }
 
         const idleImgPath = this.getHeroEmotion(onIdleReactions.emotion);
@@ -369,28 +392,43 @@ export class HeroWorker {
     }
 
 
-    _readConfigFile(configFilePath) {
+    _readConfigFile(configFilePath = null) {
+        if (!configFilePath) {
+            configFilePath = path.join(this.heroFilePath, this.configFileName)
+        }
+
         let configText = "";
         try {
             configText = fs.readFileSync(configFilePath).toString();
         }
         catch (err) {
+            // TODO: избавиться от исключений по отсутствию героя (просто не добавлять обработчик героя в курс)
             console.error(`[ERRO]: ${configFilePath} - no such file`);
-            throw Error(`${configFilePath} - no such file`);
+            throw Error(`${configFilePath} - файл конфига героя отсутствует`);
         }
         if (configText === "") {
             console.error(`[ERRO]: ${configFilePath} - file is empty`);
-            throw Error(`${configFilePath} - file is empty`);
+            throw Error(`${configFilePath} - файл конфига героя пустой`);
         }
 
-        /** @type {{hero: string, emotions: Object<string, string>}} */
+        /** @type {{heroes: Array<{hero: string, default: true | undefined, emotions: Object<string, string>}>}} */
         const configJson = JSON.parse(configText);
 
-        this.heroImagesFolder = path.join('/' + configFilePath, '..', configJson.hero);
-        this.emotions = configJson.emotions;
+        const defaultHero = configJson.heroes.find(h => h.default);
+        if (!defaultHero) {
+            console.error(`[ERRO]: ${configFilePath} - герой по умолчанию не определён (свойство 'default' не определено)`);
+            throw Error(`${configFilePath} - герой по умолчанию не определён (свойство 'default' не определено)`);
+        }
+        this.defaultHeroName = defaultHero.hero;
+
+        return configJson.heroes;
     }
 
-    _getTestReactions(reactionsFilePath) {
+    _getTestReactions(reactionsFilePath = null) {
+        if (!reactionsFilePath) {
+            reactionsFilePath = path.join(this.heroFilePath, this.testReactionsFileName);
+        }
+
         const reactions = this._getHeroTestReactionsConfig(reactionsFilePath);
         if (!reactions.success) {
             console.error(`[ERRO]: Возникла ошибка при добавлении реакций героя на тест: ${reactions.reason}`);
@@ -416,7 +454,7 @@ export class HeroWorker {
             }
         }
 
-        this.testReactions = reactionsArray;
+        return reactionsArray;
     }
 
     /**
@@ -432,13 +470,13 @@ export class HeroWorker {
         catch (err) {
             return {
                 success: false,
-                reason: `${reactionsFilePath} - Hero's test reactions file not found`,
+                reason: `${reactionsFilePath} - Файл реакций на тесты героя отсутствует`,
             };
         }
         if (configText == "") {
             return {
                 success: false,
-                reason: `${reactionsFilePath} - Hero's test reactions file is empty`,
+                reason: `${reactionsFilePath} - Файл реакций на тесты героя пустой`,
             }
         }
 
@@ -495,3 +533,4 @@ export class HeroWorker {
         }
     }
 }
+

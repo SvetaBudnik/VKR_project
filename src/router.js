@@ -1,6 +1,7 @@
 import { createWebHistory, createRouter } from 'vue-router';
 
 import loginController from './components/login';
+import gamificationEventController from './components/gamification/gamification_event_controller';
 
 import Home from './pages/home/Home.vue';
 import Course from './pages/course/Course.vue';
@@ -9,11 +10,14 @@ import Lesson from './pages/lesson/lesson.vue';
 import PageNotFound from './pages/PageNotFound.vue';
 import Login from './pages/login/Login.vue';
 import Account from './pages/account/Account.vue';
+import Dialog from './components/gamification/dialog/Dialog.vue';
 
 import { getTaskData } from './pages/tasks/taskData';
 import { getLessonData } from './pages/lesson/lessonData';
 import { getModules } from './pages/course/courseData';
 import { fetchCoursesInfo } from './pages/home/homeData';
+import gamificationController from './components/gamification/gamification_controller';
+import { isDialogVisible } from './components/gamification/dialog/dialog';
 
 const routes = [
     {
@@ -25,10 +29,12 @@ const routes = [
         path: '/',
         name: "HomePage",
         component: Home,
-        meta: { requiresCoursesData: true },
+        meta: {
+            requiresCoursesData: true,
+        },
     },
     {
-        path:'/account',
+        path: '/account',
         name: "AccountPage",
         component: Account,
     },
@@ -36,7 +42,9 @@ const routes = [
         path: '/courses/:course',
         name: "CoursePage",
         component: Course,
-        meta: { requiresModulesData: true },
+        meta: {
+            requiresModulesData: true,
+        },
     },
     {
         path: '/courses/:course/tasks/:module/:lesson/:task',
@@ -56,8 +64,15 @@ const routes = [
             requiresModulesData: true,
         },
     },
+    {
+        path: '/dialog',
+        name: 'DialogPage',
+        component: Dialog,
+    },
     { path: '/:pathMatch(.*)*', name: "PageNotFound", component: PageNotFound }
 ]
+
+
 
 const router = createRouter({
     history: createWebHistory(),
@@ -73,12 +88,16 @@ router.beforeEach(async (to, from, next) => {
 
     if (to.name !== "LoginPage" && !loginController.isUserLoggined()) {
         console.log("token is empty. Redirect to login page");
+        gamificationEventController.reset();
+
         next({ name: "LoginPage" });
         return;
     }
 
     if (to.meta.requiresCoursesData) {
         console.log("Requires courses data");
+        gamificationEventController.reset();
+
         if (!await fetchCoursesInfo()) {
             console.log("Redirect to PageNotFound");
             next({ name: "PageNotFound" });
@@ -93,6 +112,7 @@ router.beforeEach(async (to, from, next) => {
             next({ name: "HomePage" });
             return;
         }
+        await gamificationController.loadCourse(to.params.course);
     }
     if (to.meta.requiresTaskData) {
         console.log("Requires task data")

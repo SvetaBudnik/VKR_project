@@ -9,7 +9,7 @@ import { course } from './courseData';
             <h2> {{ course.courseName }} </h2>
         </div>
         <div class="container_course">
-            <ModulesList :modules="course.modules" /> 
+            <ModulesList :modules="course.modules" />
         </div>
     </section>
 </template>

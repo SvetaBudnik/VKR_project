@@ -2,12 +2,17 @@
 import { ref } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 
-import { task, testController } from '../taskData';
+import { task, testController, tasksResults, taskNum } from '../taskData';
 
 // Создаем реактивную переменную для хранения текста из текстового поля
 const inputText = ref('');
 
 testController.checkAnswers = () => checkAnswers();
+
+if (tasksResults[taskNum.value]) {
+    testController.canPerformClick.value = false;
+    highlightCorrect();
+}
 
 /**
  * Функция проверки ответа
@@ -31,10 +36,21 @@ function checkAnswers() {
     return correct;
 }
 
+function highlightCorrect() {
+    if (task.value.taskType != "textField") return null;
+
+    inputText.value = task.value.correctAnswers[0];
+}
+
 onBeforeRouteUpdate(() => {
     testController.reset();
 
     inputText.value = ""
+
+    if (tasksResults[taskNum.value]) {
+        testController.canPerformClick.value = false;
+        highlightCorrect();
+    }
 });
 </script>
 

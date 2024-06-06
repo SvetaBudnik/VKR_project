@@ -1,5 +1,5 @@
 import { marked } from 'marked';
-import fs, { stat } from 'fs';
+import fs from 'fs';
 import path from 'path';
 
 /**
@@ -39,24 +39,35 @@ import path from 'path';
  */
 
 export class CourseWorker {
-    _coursePathsFilename = "coursePaths.json";
-    _courseHeadersFilename = "courseHeaders.json";
+    #coursePathsFilename = "static/coursePaths.json";
+    #courseHeadersFilename = "static/courseHeaders.json";
 
+    /**
+     * Директория курса с его названием (например, `/courses/html_course`)
+     */
     baseCourseDir = "";
 
+    get coursePaths() {
+        return this.#readCourseInfo().coursePaths;
+    }
+    get courseHeaders() {
+        return this.#readCourseInfo().courseHeaders;
+    }
+    get courseName() {
+        return this.baseCourseDir.split('/').at(-1);
+    }
+
     /** @type {CoursePaths | null} */
-    coursePaths = null;
+    // #coursePaths = null;
 
     /** @type {CourseHeaders | null} */
-    courseHeaders = null;
+    // #courseHeaders = null;
 
     constructor(directory) {
         this.baseCourseDir = directory;
-        this._readCourseInfo();  // Читаем инфу о курсе (если она есть - то просто из файлов, иначе сканируем курс)
-        this._writeCourseInfo(); // Записываем инфу о курсе в файлы (неважно, были они или нет)
+        this.#readCourseInfo();  // Читаем инфу о курсе (если она есть - то просто из файлов, иначе сканируем курс)
+        // this._writeCourseInfo(); // Записываем инфу о курсе в файлы (неважно, были они или нет)
     }
-
-    //TODO: Реализовать сохранение ранее сконвертированных .md файлов в html формате в отдельную директорию курса
 
     /**
      * Получить текст указанного урока
@@ -65,17 +76,16 @@ export class CourseWorker {
      * @returns {{success: false, reason: string} | {success: true, data: {lesson: string}}}
      */
     getLessonFor(_module, _lesson) {
-        this._readCourseInfo();
-
         const module = this.coursePaths.modules[_module];
-        if (module === null) {
+
+        if (!module) {
             return {
                 success: false,
                 reason: `Module ${_module} not founded`,
             };
         }
         const lesson = module.lessons[_lesson];
-        if (lesson === null) {
+        if (!lesson) {
             return {
                 success: false,
                 reason: `Lesson ${_lesson} not founded`,
@@ -108,8 +118,6 @@ export class CourseWorker {
 
             theoryText = marked(md);
             fs.writeFileSync(staticFile, theoryText);
-
-            this._writeCourseInfo();
         }
 
         return {
@@ -128,8 +136,6 @@ export class CourseWorker {
      * @returns {{success: false, reason: string} | {success: true, data: {taskNumber: number, taskType: string, question: string, answers: string[] | null, correctAnswer: number | null, correctAnswers: number[] | string[] | null}}}
      */
     findTaskParams(_module, _lesson, _task) {
-        this._readCourseInfo();
-
         const module = this.coursePaths.modules[_module];
         if (module === null) {
             return {
@@ -153,9 +159,10 @@ export class CourseWorker {
         }
 
         const tasksPath = lesson.tasks;
+        /** @type {Array<{taskNumber: number, taskType: string, question: string, answers: string[] | null, correctAnswer: number | null, correctAnswers: number[] | string[] | null}>} */
         const tasks = JSON.parse(fs.readFileSync(tasksPath)).data;
         const requestedTaskInfo = tasks[_task - 1];
-        if (requestedTaskInfo === null) {
+        if (!requestedTaskInfo) {
             return {
                 success: false,
                 reason: `Task ${_task} not founded in lesson ${_lesson} on module ${_module}`,
@@ -170,49 +177,34 @@ export class CourseWorker {
     }
 
     /**
-     * Освобождает память, занимаемою курсом (если понадобится)
-     */
-    freeMemory() {
-        this._writeCourseInfo();
-
-        this.coursePaths = null;
-        this.courseHeaders = null;
-    }
-
-    /**
-     * Записывает информацию о курсе в соответствующие json файлы.
-     */
-    _writeCourseInfo() {
-        const pathsFilePath = path.join(this.baseCourseDir, this._coursePathsFilename);
-        const headersFilePath = path.join(this.baseCourseDir, this._courseHeadersFilename);
-
-        fs.writeFileSync(pathsFilePath, JSON.stringify(this.coursePaths));
-        fs.writeFileSync(headersFilePath, JSON.stringify(this.courseHeaders));
-    }
-
-    /**
      * Загружает информацию о курсе из соответствующих json файлов (либо сканирует директорию заново, если файлов нет).
      * Меняет при этом переменные `coursePaths` и `courseHeaders` (если они пусты)
      */
-    _readCourseInfo() {
-        if (this.coursePaths !== null && this.courseHeaders !== null) {
-            return;
-        }
+    #readCourseInfo() {
+        /**
+         * @type {{coursePaths: CoursePaths, courseHeaders: CourseHeaders}}
+         */
+        const courseInfo = {}
 
-        const courseName = this.baseCourseDir.split('/').at(-1);
-
-        const pathsFilePath = path.join(this.baseCourseDir, this._coursePathsFilename);
-        const headersFilePath = path.join(this.baseCourseDir, this._courseHeadersFilename);
+        const pathsFilePath = path.join(this.baseCourseDir, this.#coursePathsFilename);
+        const headersFilePath = path.join(this.baseCourseDir, this.#courseHeadersFilename);
 
         if (fs.existsSync(pathsFilePath) && fs.existsSync(headersFilePath)) {
-            console.log(`[INFO]: ${courseName}._readCourseInfo: info exists`);
-            this.coursePaths = JSON.parse(fs.readFileSync(pathsFilePath));
-            this.courseHeaders = JSON.parse(fs.readFileSync(headersFilePath));
+            courseInfo.coursePaths = JSON.parse(fs.readFileSync(pathsFilePath));
+            courseInfo.courseHeaders = JSON.parse(fs.readFileSync(headersFilePath));
         } else {
-            console.log(`[INFO]: ${courseName}._readCourseInfo: info exists`);
-            this.coursePaths = this._readCourse(path.join(this.baseCourseDir, 'course'));
-            this.courseHeaders = this._getCourseHeaders(this.coursePaths);
+            courseInfo.coursePaths = this.#readCourse(path.join(this.baseCourseDir, 'course'));
+            courseInfo.courseHeaders = this.#getCourseHeaders(courseInfo.coursePaths);
+
+            if (!fs.existsSync(path.join(this.baseCourseDir, 'static'))) {
+                fs.mkdirSync(path.join(this.baseCourseDir, 'static'));
+            }
+
+            fs.writeFileSync(pathsFilePath, JSON.stringify(courseInfo.coursePaths));
+            fs.writeFileSync(headersFilePath, JSON.stringify(courseInfo.courseHeaders));
         }
+
+        return courseInfo;
     }
 
 
@@ -221,7 +213,7 @@ export class CourseWorker {
      * @param {string} directory - папка, содержащая файлы курса
      * @returns {LessonPaths} пути до файлов курса
      */
-    _readLessonInfo(directory) {
+    #readLessonInfo(directory) {
         let result = {
             theory: "",
             tasks: "",
@@ -248,7 +240,7 @@ export class CourseWorker {
      * @param {string} directory - папка, содержащая файлы модуля
      * @returns {ModulePaths} пути до файлов модуля
      */
-    _readModuleInfo(directory) {
+    #readModuleInfo(directory) {
         /** @type {ModulePaths} */
         let result = {
             module: "",
@@ -264,7 +256,7 @@ export class CourseWorker {
             if (stats.isFile() && file.endsWith(".md")) {
                 result.module = filepath;
             } else if (stats.isDirectory()) {
-                const lessonInfo = this._readLessonInfo(filepath);
+                const lessonInfo = this.#readLessonInfo(filepath);
                 const lessonNumber = parseInt(file.split(" ").filter((val, _, __) => val.length != 0)[1]);
                 result.lessons[lessonNumber] = lessonInfo;
             }
@@ -278,7 +270,7 @@ export class CourseWorker {
      * @param {string} directory - папка, содержащая файлы курса
      * @returns {CoursePaths} пути до файлов курса
      */
-    _readCourse(directory) {
+    #readCourse(directory) {
         /** @type {CoursePaths} */
         let result = {
             course: "",
@@ -294,7 +286,7 @@ export class CourseWorker {
             if (stats.isFile() && file.endsWith(".md")) {
                 result.course = filepath;
             } else if (stats.isDirectory()) {
-                const moduleInfo = this._readModuleInfo(filepath);
+                const moduleInfo = this.#readModuleInfo(filepath);
                 const moduleNumber = parseInt(file.split(" ").filter((val) => val.length != 0)[1]);
                 result.modules[moduleNumber] = moduleInfo;
             }
@@ -306,9 +298,9 @@ export class CourseWorker {
     /**
      * Находит название урока и число тестов для урока
      * @param {LessonPaths} lesson - пути файлов, связанных с уроком
-     * @returns {{lessonName: string, tasksCount: number} | null} заголовок урока и число задач в уроке
+     * @returns {{lessonName: string, tasksCount: number}} заголовок урока и число задач в уроке
      */
-    _getLessonHeaders(lesson) {
+    #getLessonHeaders(lesson) {
         let headers = {
             lessonName: "",
             tasksCount: 0,
@@ -318,8 +310,7 @@ export class CourseWorker {
         const lessonFile = fs.readFileSync(lesson.theory).toString();
         const lessonHeaders = lessonFile.match(/### .+/g);
         if (lessonHeaders === null) {
-            console.error(`Заголовок урока ${lesson.theory} неверный. Ожидалось что-то типа '### Название урока'`);
-            return null;
+            throw Error(`Заголовок урока ${lesson.theory} неверный. Ожидалось что-то типа '### Название урока'`);
         }
 
         headers.lessonName = lessonHeaders[0].slice(4);
@@ -340,9 +331,9 @@ export class CourseWorker {
     /**
      * Находит название модуля и названия уроков этого модуля
      * @param {ModulePaths} module - информация о структуре файлов в модуле
-     * @returns {{moduleName: string, lessons: Object<number, LessonHeaders>} | null}
+     * @returns {{moduleName: string, lessons: Object<number, LessonHeaders>}}
      */
-    _getModuleHeaders(module) {
+    #getModuleHeaders(module) {
         /** @type {{moduleName: string, lessons: Object<number, LessonHeaders>}} */
         let headers = {
             moduleName: "",
@@ -352,8 +343,7 @@ export class CourseWorker {
         const moduleFile = fs.readFileSync(module.module).toString();
         const moduleHeaders = moduleFile.match(/## .+/g);
         if (moduleHeaders == null) {
-            console.error(`Заголовок модуля ${module.module} неверный. Ожидалось что-то типа '## Название модуля'`);
-            return null;
+            throw Error(`Заголовок модуля ${module.module} неверный. Ожидалось что-то типа '## Название модуля'`);
         }
 
         headers.moduleName = moduleHeaders[0].slice(3);
@@ -365,11 +355,8 @@ export class CourseWorker {
                 tasksCount: 0,
             };
 
-            const lesHeader = this._getLessonHeaders(module.lessons[key]);
-            if (lesHeader === null) {
-                console.error("Произошла ошибка при чтении хедера урока");
-                return null;
-            }
+            const lesHeader = this.#getLessonHeaders(module.lessons[key]);
+
             lessonHeader.lessonName = lesHeader.lessonName;
             lessonHeader.tasksCount = lesHeader.tasksCount;
 
@@ -384,8 +371,8 @@ export class CourseWorker {
      * @param {CoursePaths} course - пути файлов курса
      * @returns {{courseName: string, modules: Object<number, ModuleHeaders>} | null}
      */
-    _getCourseHeaders(course) {
-        if (course === null) return null;
+    #getCourseHeaders(course) {
+        if (!course) return null;
 
         /**
          * @type {{courseName: string, modules: ModuleHeaders}}
@@ -398,8 +385,7 @@ export class CourseWorker {
         const courseFile = fs.readFileSync(course.course).toString();
         const courseHeaders = courseFile.match(/# .+/g);
         if (courseHeaders == null) {
-            console.error("Заголовок курса неверный. Ожидалось что-то типа '# Название курса'");
-            return null;
+            throw Error("Заголовок курса неверный. Ожидалось что-то типа '# Название курса'");
         }
         headers.courseName = courseHeaders[0].slice(2);
         for (const key in course.modules) {
@@ -410,20 +396,12 @@ export class CourseWorker {
                 lessons: {},
             };
 
-            const modHeaders = this._getModuleHeaders(course.modules[key]);
-            if (modHeaders == null) {
-                console.error("Ошибка считывания заголовков модуля");
-            } else {
-                moduleHeaders.moduleName = modHeaders.moduleName;
-                moduleHeaders.lessons = modHeaders.lessons;
-                headers.modules[key] = moduleHeaders;
-            }
-        }
+            const modHeaders = this.#getModuleHeaders(course.modules[key]);
 
-        // console.log("\n********************************************************\n");
-        // console.log("Найдены следующие файлы курса: ");
-        // console.dir(headers, { depth: null });
-        // console.log("\n********************************************************\n");
+            moduleHeaders.moduleName = modHeaders.moduleName;
+            moduleHeaders.lessons = modHeaders.lessons;
+            headers.modules[key] = moduleHeaders;
+        }
 
         return headers;
     }

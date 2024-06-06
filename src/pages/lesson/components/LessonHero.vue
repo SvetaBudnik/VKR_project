@@ -35,7 +35,6 @@ function handleEvents() {
 
         const elem = document.getElementById(action.actionName);
         if (elem == null) {
-            console.error(`Element with id = ${action.actionName} not founded`);
             return false;
         }
 

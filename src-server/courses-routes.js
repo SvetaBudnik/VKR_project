@@ -1,8 +1,8 @@
 import express from 'express';
 import { authenticateJWT, requireAdmin } from './jwt-middleware.js';
-import { getCourseByPath, courses, isCourseExists, coursesDir, addCourse } from './courses.js';
+import { getCourseByPath, courses, isCourseExists, coursesDir, addCourse, removeCourseByName } from './courses.js';
 import multer from 'multer';
-import fs from 'fs';
+import fs, { existsSync } from 'fs';
 import path from 'path';
 
 import unzipper from 'unzipper';
@@ -43,7 +43,7 @@ coursesRoutes.get('/', (req, res) => {
  */
 coursesRoutes.get('/:coursePath', (req, res) => {
     const courseBundle = getCourseByPath(req.params.coursePath);
-    if (courseBundle === null) {
+    if (!courseBundle) {
         return res.status(404).send(`Course ${req.params.coursePath} not founded`);
     }
 
@@ -98,7 +98,7 @@ coursesRoutes.get('/:coursePath/modules/:module/lessons/:lesson/tasks/:task', (r
  */
 coursesRoutes.get('/:coursePath/modules/:module/lessons/:lesson/actions/:action', (req, res) => {
     const courseBundle = getCourseByPath(req.params.coursePath);
-    if (courseBundle === null) {
+    if (!courseBundle) {
         return res.status(404).send(`Course ${req.params.coursePath} not founded`);
     }
 
@@ -150,30 +150,35 @@ coursesRoutes.post('/upload', requireAdmin, upload.single('archive'), async (req
         // Распаковка архива
         fs.createReadStream(filePath)
             .pipe(unzipper.Extract({ path: extractPath }))
-            .on('close', () => {
+            .on('close', async () => {
                 // Удаление загруженного файла после распаковки
-                fs.unlinkSync(filePath);
+                fs.promises.unlink(filePath);
 
                 // Проверяем курс на то, что он уже существует
                 const filename = fs.readdirSync(extractPath).at(0);
-                let result = isCourseExists(filename);
+                const result = isCourseExists(filename);
                 if (!result.success) {
-                    fs.unlinkSync(`${extractPath}/${filename}`); // Удаляем файл
+                    fs.rmSync(path.join(extractPath, filename), { force: true, recursive: true }); // Удаляем файл
                     return res.status(403).send(result.reason);
                 }
 
                 // Копируем файл к курсам
-                fs.cpSync(`${extractPath}/${filename}`, `${coursesDir}/${filename}`, { recursive: true });
+                await fs.promises.cp(path.join(extractPath, filename), path.join(coursesDir, filename), { recursive: true });
 
-                fs.unlinkSync(`${extractPath}/${filename}`); // Удаляем файл
+                fs.rmSync(path.join(extractPath, filename), { force: true, recursive: true }); // Удаляем файл
 
-                result = addCourse(`${coursesDir}/${filename}`);
-                if (!result.success) {
-                    fs.unlinkSync(`${coursesDir}/${filename}`); // Удаляем файл
-                    return res.status(403).send(result.reason);
+                const addResult = await addCourse(path.join(coursesDir, filename));
+                if (!addResult.success) {
+                    fs.rmSync(path.join(coursesDir, filename), { force: true, recursive: true }); // Удаляем файл
+                    return res.status(403).send(addResult.reason);
                 }
 
-                return res.send(`File '${filename}' uploaded and extracted successfully with name ${result.coursePathber}.`);
+                return res.send({
+                    status: "success",
+                    loadedFile: filename,
+                    coursePath: addResult.coursePath,
+                    courseName: addResult.courseName,
+                });
             })
             .on('error', (err) => {
                 console.error('[ERRO]: Error while extracting archive:', err);
@@ -185,6 +190,13 @@ coursesRoutes.post('/upload', requireAdmin, upload.single('archive'), async (req
     }
 });
 
-coursesRoutes.delete('/:coursePath', requireAdmin, (req, res) => {
 
+coursesRoutes.delete('/:coursePath', requireAdmin, (req, res) => {
+    const result = removeCourseByName(req.params.coursePath);
+    if (!result) {
+        return res.status(400).send("Failed to remove course");
+    }
+    return res.json({
+        status: "success",
+    });
 });

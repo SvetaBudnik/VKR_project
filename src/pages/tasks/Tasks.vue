@@ -1,13 +1,15 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { RouterLink, onBeforeRouteUpdate } from 'vue-router'
+import { RouterLink, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 
-import { moduleNum, lessonNum, task, testController, reactions, attemptCount, heroController, courseNum } from './taskData'
+import { moduleNum, lessonNum, task, testController, taskNum, attemptCount, heroController, coursePath, tasksResults } from './taskData'
 import { getTasksCountIn, getNextLessonNumber } from '../course/courseData';
 import SingleAnswerTest from './components/SingleAnswerTest.vue';
 import MultipleAnswersTest from './components/MultipleAnswersTest.vue';
 import TextFieldTest from './components/TextFieldTest.vue';
 import TasksHero from './components/TasksHero.vue';
+
+import { beforeRouteUpdate, beforeRouteLeave, onTasksLoaded, gaming__is_last_test_ever, gaming__total_score } from './gamification_helper.js';
 
 /**
  * @template T
@@ -15,49 +17,47 @@ import TasksHero from './components/TasksHero.vue';
  * @property {T} value
  */
 
-const isModalVisible = ref(false);
-const modalMessage = ref("");
-const modalTimeoutNumber = ref(0);
+await onTasksLoaded();
 
+tasksResults.length = 0;
 
 async function checkAnswers() {
-    resetModal();
-
     const answerResult = testController.checkAnswers();
     if (answerResult === null) {
         return;
     }
-    attemptCount.value++;
 
     if (answerResult === true) {
-        openModal(`${reactions.value.onSuccess.phrase} --- ${reactions.value.onSuccess.emotionImgPath}`);
+        tasksResults[taskNum.value] = score.value;
+        gaming__total_score.value += score.value;
         heroController.showSuccess();
     } else {
-        openModal(`${reactions.value.onError.phrase} --- ${reactions.value.onError.emotionImgPath}`);
-        heroController.showError();
+        attemptCount.value++;
+        await heroController.showError();
     }
 }
 
 const prevTask = computed(() => {
     if (task.value.taskNumber - 1 <= 0) {
-        return `/courses/${courseNum.value}/lessons/${moduleNum.value}/${lessonNum.value}`;
+        return `/courses/${coursePath.value}/lessons/${moduleNum.value}/${lessonNum.value}`;
     }
 
-    return `/courses/${courseNum.value}/tasks/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber - 1}`
+    return `/courses/${coursePath.value}/tasks/${moduleNum.value}/${lessonNum.value}/${+task.value.taskNumber - 1}`
 });
 
 const nextTask = computed(() => {
     const tasksCount = getTasksCountIn(moduleNum.value, lessonNum.value);
     const nextTask = +task.value.taskNumber + 1;
     if (tasksCount >= nextTask) {
-        return `/courses/${courseNum.value}/tasks/${moduleNum.value}/${lessonNum.value}/${nextTask}`
+        return `/courses/${coursePath.value}/tasks/${moduleNum.value}/${lessonNum.value}/${nextTask}`
     }
 
     const nextLesson = getNextLessonNumber(moduleNum.value, lessonNum.value);
     if (nextLesson == null) {
+        gaming__is_last_test_ever.value = true;
         return '/courses/${courseNum}';
     }
-    return `/courses/${courseNum.value}/lessons/${nextLesson.module}/${nextLesson.lesson}`;
+    return `/courses/${coursePath.value}/lessons/${nextLesson.module}/${nextLesson.lesson}`;
 });
 
 // TODO: Выдавать число баллов Тэгом
@@ -65,38 +65,20 @@ const nextTask = computed(() => {
 // Вычисляем количество баллов в зависимости от номера попытки
 const score = computed(() => {
     const scores = {
-        0: 0,
         1: 5,
         2: 4,
         3: 2,
     };
 
-    return scores[attemptCount.value] ?? 1;
+    return scores[attemptCount.value + 1] ?? 1;
 });
 
-function openModal(label) {
-    modalMessage.value = label;
-    isModalVisible.value = true;
-    modalTimeoutNumber.value = setTimeout(() => {
-        closeModal()
-    }, 5000)
-}
-
-// Функция закрытия модального окна
-function closeModal() {
-    isModalVisible.value = false
-}
-
-function resetModal() {
-    clearTimeout(modalTimeoutNumber.value);
-    closeModal();
-}
-
-onBeforeRouteUpdate(() => {
+onBeforeRouteUpdate(async (to, from) => {
     testController.reset();
 
-    resetModal();
+    await beforeRouteUpdate(to, from);
 });
+onBeforeRouteLeave(beforeRouteLeave);
 </script>
 
 <template>
@@ -137,12 +119,6 @@ onBeforeRouteUpdate(() => {
                 <RouterLink :to="prevTask" id="previos_task"> Предыдущее задание </RouterLink>
                 <button id="check_ans" @click="checkAnswers">Проверить задание </button>
                 <RouterLink :to="nextTask" id="next_task"> Следующее задание </RouterLink>
-            </div>
-        </div>
-
-        <div class="modal" v-show="isModalVisible">
-            <div class="modal-content">
-                <p>{{ modalMessage }}</p>
             </div>
         </div>
     </section>

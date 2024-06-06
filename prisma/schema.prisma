@@ -1,0 +1,49 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+model User {
+    id Int @id @default(autoincrement())
+
+    username String     @unique
+    password String
+    role     String
+    Progress Progress[]
+}
+
+// отношение прогресса пользователя по указанному курсу
+//
+// Прогресс хранится в JSON в следующем формате:
+// {
+//     "lessons": {
+//         ... // Записи формата "<модуль>-<урок>" : boolean (пройден ли урок)
+//     },
+//     "tasks": {
+//         ... // Записи формата "<модуль>-<урок>": number (сколько баллов получено за тест по этому уроку)
+//     },
+//     "meta_fields": {
+//         "achievements": [ 
+//             ... // Записи формата "<achievement_name>"
+//         ],
+//         "variables": {
+//             ... // Записи формата "<variable_name>": number
+//         }
+//     }
+// }
+model Progress {
+    userId     Int
+    coursename String
+    user       User   @relation(fields: [userId], references: [id])
+
+    progress String // Stringified JSON
+
+    @@unique([userId, coursename])
+}

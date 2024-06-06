@@ -60,7 +60,7 @@ class LoginController {
 
     /**
      * Отправить POST-запрос на сервер (требует логина)
-     * @param {string} path - путь POST-запроса к серверу
+     * @param {string} path - путь POST-запроса к серверу (например, `api/getUserInfo`)
      * @param {object} body - тело POST-запроса 
      * @returns {Promise<Response | null>} `null`, если пользователь не залогинен, иначе Response
      */
@@ -78,6 +78,98 @@ class LoginController {
                 "Authorization": authToken,
             },
             body: JSON.stringify(body),
+        });
+
+        return response;
+    }
+
+    /**
+     * Отправить PUT-запрос на сервер (требует логина)
+     * @param {string} path - путь PUT-запроса к серверу (например, `api/getUserInfo`)
+     * @param {object} body - тело PUT-запроса 
+     * @returns {Promise<Response | null>} `null`, если пользователь не залогинен, иначе Response
+     */
+    async sendPut(path, body) {
+        if (!this.isUserLoggined()) {
+            return null;
+        }
+        const authToken = this.token.value;
+
+        const response = await fetch(`${baseUrl}${path}`, {
+            method: "PUT",
+            headers: {
+                "Accept": "application/json",
+                "content-type": "application/json",
+                "Authorization": authToken,
+            },
+            body: JSON.stringify(body),
+        });
+
+        return response;
+    }
+
+    /**
+     * Отправить POST-запрос с данными формы на сервер (требует логина)
+     * @param {string} path - путь POST-запроса к серверу (например, `api/getUserInfo`)
+     * @param {object} form - тело POST-запроса 
+     * @returns {Promise<Response | null>} `null`, если пользователь не залогинен, иначе Response
+     */
+    async sendForm(path, form) {
+        if (!this.isUserLoggined()) {
+            return null;
+        }
+        const authToken = this.token.value;
+
+        const response = await fetch(`${baseUrl}${path}`, {
+            method: "POST",
+            headers: {
+                "Authorization": authToken,
+            },
+            body: form,
+        });
+
+        return response;
+    }
+
+    /**
+     * Отправить POST-запрос на сервер без заголовков (требует логина)
+     * @param {string} path - путь POST-запроса к серверу (например, `api/getUserInfo`)
+     * @param {object} body - тело POST-запроса 
+     * @returns {Promise<Response | null>} `null`, если пользователь не залогинен, иначе Response
+     */
+    async sendPostWithoutHeaders(path, body) {
+        if (!this.isUserLoggined()) {
+            return null;
+        }
+        const authToken = this.token.value;
+
+        const response = await fetch(`${baseUrl}${path}`, {
+            method: "POST",
+            headers: {
+                "Authorization": authToken,
+            },
+            body: JSON.stringify(body),
+        });
+
+        return response;
+    }
+
+    /**
+     * Отправить DELETE-запрос на сервер (требует логина)
+     * @param {string} path - путь DELETE-запроса к серверу (например, `api/UserInfo/user1`)
+     * @returns {Promise<Response | null>} `null`, если пользователь не залогинен, иначе Response
+     */
+    async sendDelete(path) {
+        if (!this.isUserLoggined()) {
+            return null;
+        }
+        const authToken = this.token.value;
+        const response = await fetch(`${baseUrl}${path}`, {
+            method: "DELETE",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": authToken,
+            },
         });
 
         return response;
@@ -124,6 +216,85 @@ class LoginController {
         window.localStorage.removeItem("token");
         window.localStorage.removeItem("userRole");
         window.localStorage.removeItem("login");
+    }
+
+    /**
+     * Отправляет запрос на сервер для смены логина
+     * @param {string} newLogin - новый логин пользователя
+     * @returns { Promise<{success: true} | {success: false, reason: string}> }
+     */
+    async changeLogin(newLogin) {
+        const response = await this.sendPost(
+            'api/login/change-login',
+            {
+                "newLogin": newLogin,
+            },
+        );
+
+        if (response === null) {
+            console.error("Юзер не залогинен!");
+            return {
+                success: false,
+                reason: "User not loggined",
+            };
+        }
+
+        if (!response.ok) {
+            return {
+                success: false,
+                reason: await response.text(),
+            };
+        }
+        /** @type { { newToken: string } } */
+        const respJson = await response.json();
+
+        this.login.value = newLogin;
+        this.token.value = respJson.newToken;
+
+        window.localStorage.setItem("login", newLogin);
+        window.localStorage.setItem("token", respJson.newToken);
+
+        return {
+            success: true,
+        };
+    }
+
+    /**
+     * Отправляет запрос на сервер для смены пароля
+     * @param {string} newPassword - новый пароль пользователя
+     * @returns { Promise<{success: true} | {success: false, reason: string}> }
+     */
+    async changePassword(newPassword) {
+        const response = await this.sendPost(
+            'api/login/change-password',
+            {
+                "newPassword": newPassword,
+            },
+        );
+
+        if (response === null) {
+            console.error("Юзер не залогинен!");
+            return {
+                success: false,
+                reason: "User not loggined",
+            };
+        }
+
+        if (!response.ok) {
+            return {
+                success: false,
+                reason: await response.text(),
+            };
+        }
+        /** @type { { newToken: string } } */
+        const respJson = await response.json();
+
+        this.token.value = respJson.newToken;
+        window.localStorage.setItem("token", respJson.newToken);
+
+        return {
+            success: true,
+        };
     }
 }
 

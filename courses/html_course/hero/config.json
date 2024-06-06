@@ -1,12 +1,24 @@
 {
-    "hero": "tag",
-    "emotions": {
-        "cry":"cry-img.png",
-        "happy":"happy-img.png",
-        "welcome":"welcome-img.png",
-        "sad":"sad-img.png",
-        "angry":"angry-img.png",
-        "reverie":"reverie-img.png",
-        "neutral":"neutral-img.png"
-    }
+    "heroes": [
+        {
+            "hero": "tag",
+            "default": true,
+            "emotions": {
+                "cry": "cry-img.png",
+                "happy": "happy-img.png",
+                "welcome": "welcome-img.png",
+                "sad": "sad-img.png",
+                "angry": "angry-img.png",
+                "reverie": "reverie-img.png",
+                "neutral": "neutral-img.png"
+            }
+        },
+        {
+            "hero": "default-hero",
+            "emotions": {
+                "sad": "sad-img.png",
+                "happy": "happy-img.png"
+            }
+        }
+    ]
 }

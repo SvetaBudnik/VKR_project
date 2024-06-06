@@ -17,7 +17,7 @@ export const course = ref(null);
 
 /** @type {Ref<null | number>} */
 export const courseNum = ref(null);
-
+// TODO: переименовать в coursePath
 
 function generateLinksForLessons() {
     const modules = course.value.modules;

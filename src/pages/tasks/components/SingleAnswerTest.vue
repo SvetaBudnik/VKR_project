@@ -2,11 +2,16 @@
 import { ref } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 
-import { task, testController } from '../taskData';
+import { task, testController, tasksResults, taskNum } from '../taskData';
 
 testController.checkAnswers = () => checkAnswers();
 
 const resetSelectionTimeout = ref(0);
+
+if (tasksResults[taskNum.value]) {
+    testController.canPerformClick.value = false;
+    highlightCorrect();
+}
 
 // Обработчик клика для выбора одного ответа
 function onSingleAnswerClick(selectedIndex) {
@@ -60,6 +65,17 @@ function checkAnswers() {
     return correct;
 }
 
+function highlightCorrect() {
+    if (task.value.taskType != "singleAnswer") return null;
+    
+    const buttons = document.querySelectorAll('.but');
+    buttons.forEach((button) => {
+        const answerIndex = task.value.answers.indexOf(button.textContent);
+        if (answerIndex === task.value.correctAnswer) {
+            button.classList.add('correct');
+        }
+    });
+}
 
 onBeforeRouteUpdate(() => {
     clearTimeout(resetSelectionTimeout.value);
@@ -71,6 +87,11 @@ onBeforeRouteUpdate(() => {
         button.classList.remove('correct')
         button.classList.remove('incorrect')
     })
+
+    if (tasksResults[taskNum.value]) {
+        testController.canPerformClick.value = false;
+        highlightCorrect();
+    }
 });
 </script>
 

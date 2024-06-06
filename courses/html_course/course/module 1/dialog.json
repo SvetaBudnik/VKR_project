@@ -1,0 +1,65 @@
+{
+    "event": "onModuleStart",
+    "dialog": [
+        {
+            "hero": "tag",
+            "emotion": "neutral",
+            "text": "Привет!"
+        },
+        {
+            "hero": "default-hero",
+            "emotion": "happy",
+            "text": "Привет! Как жизнь?"
+        },
+        {
+            "hero": "tag",
+            "emotion": "neutral",
+            "text": "Да ничего, понемногу осваиваюсь. Хорошо, что здесь есть другие люди!"
+        },
+        {
+            "type": "fork",
+            "condition": {
+                "variable": "test_scores",
+                "on": {
+                    ">= 35": [
+                        {
+                            "hero": "default-hero",
+                            "emotion": "happy",
+                            "text": "Ты неплохо справляешься с обучением!"
+                        },
+                        {
+                            "hero": "tag",
+                            "emotion": "neutral",
+                            "text": "Спасибо"
+                        },
+                        {
+                            "givePoints": [
+                                {
+                                    "variable": "html_master",
+                                    "value": 5
+                                }
+                            ]
+                        },
+                        {
+                            "giveAchievements": [
+                                "lets get started"
+                            ]
+                        }
+                    ],
+                    "else": [
+                        {
+                            "hero": "default-hero",
+                            "emotion": "sad",
+                            "text": "Вижу, учёба тебе даётся с трудом. Но не переживай, у тебя всё получится!"
+                        },
+                        {
+                            "hero": "tag",
+                            "emotion": "sad",
+                            "text": "Это да... Спасибо за поддержку!"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

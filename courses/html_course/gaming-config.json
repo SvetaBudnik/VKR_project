@@ -1,0 +1,14 @@
+{
+    "variables": [
+        "overall_score",
+        "test_scores",
+        "html_master"
+    ],
+    "achievements": [
+        {
+            "name": "lets get started",
+            "description": "Пройти первый урок курса",
+            "image": "/html_course/hero/tag/happy-img.png"
+        }
+    ]
+}
